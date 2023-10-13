@@ -1,0 +1,13 @@
+# vscode
+.vscode/
+
+# ROS stuff
+devel/
+logs/
+build/
+log/
+install/
+bin/
+lib/
+msg_gen/
+srv_gen/
