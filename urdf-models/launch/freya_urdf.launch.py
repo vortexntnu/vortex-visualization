@@ -1,8 +1,10 @@
+import math
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution
 from launch_ros.substitutions import FindPackageShare
-
+from launch_ros.actions import Node
 
 def generate_launch_description():
     ld = LaunchDescription()
@@ -26,7 +28,22 @@ def generate_launch_description():
         }.items()
     )
 
+    # base_link (NED) to base_link (ENU) tf. TODO: Move to asv_setup tf.launch.py
+    tf_base_link_ned_to_base_link_enu = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['--x'             , '0',
+                   '--y'             , '0',
+                   '--z'             , '0',
+                   '--roll'          , '0',
+                   '--pitch'         , str(math.pi),
+                   '--yaw'           , '0',
+                   '--frame-id'      , 'base_link',
+                   '--child-frame-id', 'base_link_ENU']
+    )
+
     return LaunchDescription([
         urdf_package_path_launch_arg,
-        urdf_launch
+        urdf_launch,
+        tf_base_link_ned_to_base_link_enu
     ])
