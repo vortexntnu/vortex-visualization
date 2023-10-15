@@ -28,7 +28,7 @@ def generate_launch_description():
         }.items()
     )
 
-    # base_link (NED) to base_link (ENU) tf. TODO: Move to asv_setup tf.launch.py
+    # base_link (NED) to base_link (SEU) tf. TODO: Move to asv_setup tf.launch.py
     tf_base_link_ned_to_base_link_enu = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -39,11 +39,11 @@ def generate_launch_description():
                    '--pitch'         , str(math.pi),
                    '--yaw'           , '0',
                    '--frame-id'      , 'base_link',
-                   '--child-frame-id', 'base_link_ENU']
+                   '--child-frame-id', 'base_link_SEU']
     )
 
     return LaunchDescription([
         urdf_package_path_launch_arg,
         urdf_launch,
-        tf_base_link_ned_to_base_link_enu
+        # tf_base_link_ned_to_base_link_enu
     ])

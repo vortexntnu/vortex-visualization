@@ -5,7 +5,7 @@
 <robot
   name="ASV_MainAssembly">
   <link
-    name="base_link_ENU">
+    name="base_link_SEU">
     <visual>
       <origin
         xyz="0 0 0"
