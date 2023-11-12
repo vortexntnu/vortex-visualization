@@ -1,6 +1,7 @@
-import { PanelExtensionContext, RenderState} from "@foxglove/studio";
+import { PanelExtensionContext} from "@foxglove/studio";
 import { useLayoutEffect, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
+import { Slider } from '@mui/material';
 import type {Parameter, ParameterValue, SetSrvParam} from "parameter_types";
 
 
@@ -26,14 +27,14 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
 
 
 
+ 
   useLayoutEffect( () => {
 
-    context.onRender = (renderState: RenderState, done) => { 
-
+    context.onRender = (renderState, done) => { 
       setRenderDone(() => done); 
       updateNodeList();
 
-      //Manage some styling for light and dark theme
+      // Manage some styling for light and dark theme
       setColorScheme(renderState.colorScheme);
       if(renderState.colorScheme == "light") {
         setBgColor("#d6d6d6");
@@ -56,6 +57,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
   useEffect(() => {  
     renderDone?.();
   }, [renderDone]);
+
 
   /**
    * converts string representation of a boolean to a boolean
@@ -113,19 +115,24 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
    */
 const updateNodeList = () => {
   setStatus("retreiving nodes...")
-  context.callService?.("/rosapi/nodes", {})
-  .then((_values: unknown) =>{ 
-    setNodeList((_values as any).nodes as string[]);
+  // context.callService?.("/rosapi/nodes", {})
+  // .then((_values: unknown) =>{ 
+    // setNodeList((_values as any).nodes as string[]);
+    setNodeList(["/pcl_detector_node"]);
     setStatus("nodes retreived");  
-  })
-  .catch((_error: Error) => { setStatus(_error.toString()); });
-}
+  }
+
+
+
+
+
+
 
 /**
  * Retrieves a list of all parameters for the current node and their values
  */
 const updateParamList = () =>{
-
+  print()
   context.callService?.(node + "/list_parameters", {})
   .then((_value: unknown) => {
     paramNameList = (_value as any).result.names as string[];
@@ -272,27 +279,55 @@ const updateSrvParamList = (name: string, val: string) => {
 }
 
 /**
- * Creates a dropdown input box if param is a boolean, creates a text input box otherwise
+ * Creates a dropdown input box if param is a boolean, creates a slider if param is int or double or inputbox otherwise
  * @param   param The parameter that an input box is being created for
- * @returns A dropdown if param.value.type == 1, a textbox otherwise
+ * @returns A dropdown if param.value.type == 1, slider if param.value.type==2 | 3
  */
 const createInputBox = (param: Parameter) => {
-  if(param.value.type == 1) {
-    return(
+  if (param.value.type === 1) {
+    console.log("param value ");
+    return (
       <select
-      style={dropDownStyle}
-      onChange={(event) => { updateSrvParamList(param.name, event.target.value) }}
+        style={dropDownStyle}
+        onChange={(event) => updateSrvParamList(param.name, event.target.value)}
       >
         <option selected hidden></option>
-        <option>true</option>
-        <option>false</option>
+          <option>true</option>
+          <option>false</option>
       </select>
     );
+  } else if (param.value.type === 2) {
+    return (
+      <Slider
+        style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
+        min={0}
+        max={5}
+        step={1}
+        value={parseInt(getParameterValue(param.value), 10)}
+        onChange={(_, value) => updateSrvParamList(param.name, value.toString())}
+      />
+    );
   }
-  return(
-    <input style={inputStyle} placeholder={getParameterValue(param.value)} onChange={(event) => { updateSrvParamList(param.name, event.target.value) }}/> 
+  else if (param.value.type === 3) {
+    return (
+      <Slider
+        style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
+        min={0}
+        max={5}
+        step={0.1}
+        value={parseFloat(getParameterValue(param.value))}
+        onChange={(_, value) => updateSrvParamList(param.name, value.toString())}
+      />
+    );
+  }
+  return (
+    <input
+      style={inputStyle}
+      placeholder={getParameterValue(param.value)}
+      onChange={(event) => updateSrvParamList(param.name, event.target.value)}
+    />
   );
-}
+};
 
 
 /**
