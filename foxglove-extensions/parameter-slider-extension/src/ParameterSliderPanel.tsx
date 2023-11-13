@@ -303,8 +303,7 @@ const createInputBox = (param: Parameter) => {
         max={100}
         step={1}
         value={parseInt(getParameterValue(param.value), 10)}
-        valueLabelDisplay="on"
-        onChange={(_, value) => handleSliderChange(param.name, value.toString())}
+        onChangeCommitted={(_, value) => handleSliderChange(param.name, value.toString())}
       />
     );
   }
@@ -316,8 +315,7 @@ const createInputBox = (param: Parameter) => {
         max={5}
         step={0.1}
         value={parseFloat(getParameterValue(param.value))}
-        valueLabelDisplay="on"
-        onChange={(_, value) => handleSliderChange(param.name, value.toString())}
+        onChangeCommitted={(_, value) => handleSliderChange(param.name, value.toString())}
       />
     );
   }
