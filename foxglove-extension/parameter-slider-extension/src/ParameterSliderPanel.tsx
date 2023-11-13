@@ -6,7 +6,7 @@ import type {Parameter, ParameterValue, SetSrvParam} from "parameter_types";
 
 
 
-let node: string;
+let node: string = "/pcl_detector_node";
 let paramNameList: string[];
 let paramValList: ParameterValue[];
 
@@ -19,7 +19,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
 
   const [paramList, setParamList] = useState<Array<Parameter>>();
   const [srvParamList, setSrvParamList] = useState<Array<SetSrvParam>>();
-  const [nodeList, setNodeList] = useState<string[]>();
+  // const [nodeList, setNodeList] = useState<string[]>();
 
   const [colorScheme, setColorScheme] = useState<string>();
   const [bgColor, setBgColor] = useState("#d6d6d6");
@@ -32,7 +32,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
 
     context.onRender = (renderState, done) => { 
       setRenderDone(() => done); 
-      updateNodeList();
+      updateParamList()
 
       // Manage some styling for light and dark theme
       setColorScheme(renderState.colorScheme);
@@ -80,7 +80,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
   const isBooleanArr = (strArr: string[]) => {
     let bool: boolean = true;
     strArr.forEach(element => {
-      console.log(stringToBoolean(element));
+      // console.log(stringToBoolean(element));
       if(stringToBoolean(element) === undefined)
         bool = false;
     });
@@ -113,14 +113,14 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
 /**
    * Updates the list of nodes when a new node appears
    */
-const updateNodeList = () => {
-  setStatus("retreiving nodes...")
-  // context.callService?.("/rosapi/nodes", {})
-  // .then((_values: unknown) =>{ 
-    // setNodeList((_values as any).nodes as string[]);
-    setNodeList(["/pcl_detector_node"]);
-    setStatus("nodes retreived");  
-  }
+// const updateNodeList = () => {
+//   setStatus("retreiving nodes...")
+//   // context.callService?.("/rosapi/nodes", {})
+//   // .then((_values: unknown) =>{ 
+//     // setNodeList((_values as any).nodes as string[]);
+//     setNodeList(["/pcl_detector_node"]);
+//     setStatus("nodes retreived");  
+//   }
 
 
 
@@ -132,7 +132,6 @@ const updateNodeList = () => {
  * Retrieves a list of all parameters for the current node and their values
  */
 const updateParamList = () =>{
-  print()
   context.callService?.(node + "/list_parameters", {})
   .then((_value: unknown) => {
     paramNameList = (_value as any).result.names as string[];
@@ -285,7 +284,7 @@ const updateSrvParamList = (name: string, val: string) => {
  */
 const createInputBox = (param: Parameter) => {
   if (param.value.type === 1) {
-    console.log("param value ");
+
     return (
       <select
         style={dropDownStyle}
@@ -301,10 +300,11 @@ const createInputBox = (param: Parameter) => {
       <Slider
         style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
         min={0}
-        max={5}
+        max={100}
         step={1}
         value={parseInt(getParameterValue(param.value), 10)}
-        onChange={(_, value) => updateSrvParamList(param.name, value.toString())}
+        valueLabelDisplay="on"
+        onChange={(_, value) => handleSliderChange(param.name, value.toString())}
       />
     );
   }
@@ -316,7 +316,8 @@ const createInputBox = (param: Parameter) => {
         max={5}
         step={0.1}
         value={parseFloat(getParameterValue(param.value))}
-        onChange={(_, value) => updateSrvParamList(param.name, value.toString())}
+        valueLabelDisplay="on"
+        onChange={(_, value) => handleSliderChange(param.name, value.toString())}
       />
     );
   }
@@ -329,6 +330,10 @@ const createInputBox = (param: Parameter) => {
   );
 };
 
+const handleSliderChange = (name: string, value: string) => {
+  updateSrvParamList(name, value.toString());
+  setParam();
+};
 
 /**
  * loads parameter values from a YAML file and sets all new values
@@ -364,9 +369,9 @@ const loadFile = (files: FileList | null) => {
       }
       setParam();
     })
-    .catch((error: Error) => {
-      console.log(error)
-    });
+    // .catch((error: Error) => {
+      // console.log(error)
+    // });
   }
 }
 
@@ -526,7 +531,7 @@ return (
                 }}>
     <h1>ROS2 Parameter Extension</h1>
     <label style={labelStyle}>Node:</label>
-    <select
+    {/* <select
       value={node}
       onChange={(event) => { node = event.target.value; updateParamList(); }}
       style={dropDownStyle}
@@ -535,7 +540,7 @@ return (
       {(nodeList ?? []).map((node) => (
         <option key={node} value={node}>{node}</option>
       ))}
-    </select>
+    </select> */}
 
     <form>
       <button 

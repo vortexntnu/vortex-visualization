@@ -23,8 +23,8 @@ declare module "parameter_types" {
         value?: {
             type: number;
             bool_value?: boolean;
-            integer_value?: number;
-            double_value?: number;
+            integer_value?: int;
+            double_value?: float;
             string_value?: string;
             byte_array_value?: number[];
             bool_array_value?: boolean[];
