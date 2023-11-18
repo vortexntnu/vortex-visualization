@@ -2,13 +2,16 @@ import { PanelExtensionContext} from "@foxglove/studio";
 import { useLayoutEffect, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { Slider } from '@mui/material';
-import type {Parameter, ParameterValue, SetSrvParam} from "parameter_types";
+import type {NodeConfig, Parameter, ParameterProperties, ParameterValue, SetSrvParam} from "parameter_types";
+import * as nodeParams from './nodeparams.json';
 
 
 
-let node: string = "/pcl_detector_node";
+
+let node: NodeConfig;
 let paramNameList: string[];
 let paramValList: ParameterValue[];
+let list: NodeConfig[] = nodeParams;
 
 function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): JSX.Element {
   
@@ -19,20 +22,19 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
 
   const [paramList, setParamList] = useState<Array<Parameter>>();
   const [srvParamList, setSrvParamList] = useState<Array<SetSrvParam>>();
-  // const [nodeList, setNodeList] = useState<string[]>();
-
+  const [nodeConfigList, setNodeList] = useState<NodeConfig[]>();
   const [colorScheme, setColorScheme] = useState<string>();
   const [bgColor, setBgColor] = useState("#d6d6d6");
   const [loadButtonBgColor, setLoadButtonBgColor] = useState("#d6d6d6");
 
 
 
- 
   useLayoutEffect( () => {
-
+    
     context.onRender = (renderState, done) => { 
       setRenderDone(() => done); 
-      updateParamList()
+      updateNodeList();
+
 
       // Manage some styling for light and dark theme
       setColorScheme(renderState.colorScheme);
@@ -46,7 +48,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
     };
 
     //If new topics are found, context.onRender() will update the list of nodes
-    context.watch("topics");
+    // context.watch("topics");
 
     //If colorScheme changes, context.onRender() will change styling to match new color scheme
     context.watch("colorScheme");
@@ -111,16 +113,15 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
   }
 
 /**
-   * Updates the list of nodes when a new node appears
-   */
-// const updateNodeList = () => {
-//   setStatus("retreiving nodes...")
-//   // context.callService?.("/rosapi/nodes", {})
-//   // .then((_values: unknown) =>{ 
-//     // setNodeList((_values as any).nodes as string[]);
-//     setNodeList(["/pcl_detector_node"]);
-//     setStatus("nodes retreived");  
-//   }
+//    * Updates the list of nodes when a new node appears
+//    */
+const updateNodeList = () => {
+  setStatus("retreiving nodes...")
+  // context.callService?.("/rosapi/nodes", {})
+  // .then((_values: unknown) =>{ 
+    setNodeList(nodeParams);
+    setStatus("nodes retreived");  
+  }
 
 
 
@@ -132,11 +133,11 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
  * Retrieves a list of all parameters for the current node and their values
  */
 const updateParamList = () =>{
-  context.callService?.(node + "/list_parameters", {})
+  context.callService?.(node.name + "/list_parameters", {})
   .then((_value: unknown) => {
     paramNameList = (_value as any).result.names as string[];
 
-    context.callService?.(node + "/get_parameters", {names: paramNameList})
+    context.callService?.(node.name + "/get_parameters", {names: paramNameList})
     .then((_value: unknown) => {
       paramValList = (_value as any).values as ParameterValue[];
 
@@ -173,7 +174,7 @@ const setParam = () => {
   }
 
   setSrvParamList(tempList);
-  context.callService?.(node + "/set_parameters", {parameters: srvParamList})
+  context.callService?.(node.name + "/set_parameters", {parameters: srvParamList})
   .then(() => {
     updateParamList();
     setStatus("parameters set");
@@ -277,14 +278,61 @@ const updateSrvParamList = (name: string, val: string) => {
   });
 }
 
+const getPropertiesOfParam = (param: Parameter) => {
+
+  // Check if node is undefined
+  if (!node) {
+      // Handle the case where node is not available
+      return null;
+  }
+
+  // Find the NodeConfig in nodeList
+  let nodeConfig: NodeConfig | undefined = nodeConfigList?.find(n => n.name === node.name);
+
+  // Check if nodeConfig is undefined
+  if (!nodeConfig) {
+      // Handle the case where nodeConfig is not found
+      return null;
+  }
+
+  // Access parameters array and find the specific parameter
+  let parameterProperties: ParameterProperties | undefined = nodeConfig.parameters?.find(p => p.name === param.name);
+
+  // Check if parameterProperties is undefined
+  if (!parameterProperties) {
+      // Handle the case where parameterProperties is not available
+      return null;
+  }
+
+  return parameterProperties;
+}
+
+  
 /**
  * Creates a dropdown input box if param is a boolean, creates a slider if param is int or double or inputbox otherwise
  * @param   param The parameter that an input box is being created for
  * @returns A dropdown if param.value.type == 1, slider if param.value.type==2 | 3
  */
 const createInputBox = (param: Parameter) => {
-  if (param.value.type === 1) {
+  let parameterProperties: ParameterProperties | null = getPropertiesOfParam(param);
+  if(parameterProperties?.dropdownOptions){
+    return (
+      <select
+        style={dropDownStyle}
+        onChange={(event) => updateSrvParamList(param.name, event.target.value)}
+      >
+         <option selected hidden></option>
+      {parameterProperties.dropdownOptions.map((option, index) => (
+        <option key={index} value={option}>
+          {option}
+        </option>
+      ))}
+      </select>
+    );
+  }
 
+
+  if (param.value.type === 1) {
     return (
       <select
         style={dropDownStyle}
@@ -299,9 +347,10 @@ const createInputBox = (param: Parameter) => {
     return (
       <Slider
         style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
-        min={0}
-        max={100}
+        min={parameterProperties?.min_value ?? 0}
+        max={parameterProperties?.max_value ?? 50}
         step={1}
+        valueLabelDisplay="auto"
         value={parseInt(getParameterValue(param.value), 10)}
         onChangeCommitted={(_, value) => handleSliderChange(param.name, value.toString())}
       />
@@ -311,9 +360,10 @@ const createInputBox = (param: Parameter) => {
     return (
       <Slider
         style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
-        min={0}
-        max={5}
+        min={parameterProperties?.min_value ?? 0}
+        max={parameterProperties?.max_value ?? 5}
         step={0.1}
+        valueLabelDisplay="auto"
         value={parseFloat(getParameterValue(param.value))}
         onChangeCommitted={(_, value) => handleSliderChange(param.name, value.toString())}
       />
@@ -331,6 +381,21 @@ const createInputBox = (param: Parameter) => {
 const handleSliderChange = (name: string, value: string) => {
   updateSrvParamList(name, value.toString());
   setParam();
+};
+
+/**
+ * Creates a inputbox regardless of param type
+ * @param   param The parameter that an input box is being created for
+ * @returns inputbox
+ */
+const createInputOnlyBox = (param: Parameter) => {
+  return (
+    <input
+      style={inputStyle}
+      placeholder={getParameterValue(param.value)}
+      onChange={(event) => updateSrvParamList(param.name, event.target.value)}
+    />
+  );
 };
 
 /**
@@ -530,13 +595,25 @@ return (
     <h1>ROS2 Parameter Extension</h1>
     <label style={labelStyle}>Node:</label>
     {/* <select
-      value={node}
-      onChange={(event) => { node = event.target.value; updateParamList(); }}
+      value={node.name}
+      onChange={(event) => {
+        // Find the selected node in the nodeList based on its name
+        const selectedNode = nodeConfigList?.find(n => n.name === event.target.value);
+      
+        // Check if a node is found
+        if (selectedNode) {
+          // Update the node variable with the selectedNode
+          node = selectedNode;
+      
+          // Trigger the updateParamList function
+          updateParamList();
+        }
+      }}
       style={dropDownStyle}
       >
       <option selected hidden>Select a Node</option>
-      {(nodeList ?? []).map((node) => (
-        <option key={node} value={node}>{node}</option>
+      {(nodeConfigList ?? []).map((node) => (
+        <option key={node.name} value={node.name}>{node.name}</option>
       ))}
     </select> */}
 
@@ -575,7 +652,7 @@ return (
           <>
             <div style={{margin: "0px 4px 0px 4px"}} key={result.name}>{result.name}:</div>
             <div style={{margin: "0px 4px 0px 4px"}}>{getType(result.value)}</div>
-            <div style={{margin: "0px 4px 0px 4px"}}>{getParameterValue(result.value)}</div>
+            <div style={{margin: "0px 4px 0px 4px"}}>{createInputOnlyBox(result)}</div>
             <div style={{margin: "0px 4px 0px 4px"}}> 
               {createInputBox(result)}
               </div>  
@@ -585,7 +662,7 @@ return (
     </form>
   </div>
   <div style={{left: "0px", bottom: "0px", height: "25px", width: "100%", position: "sticky"}}>
-    <p style={statusStyle}>status: {status}</p>
+    <p style={statusStyle}>status: {status} {nodeConfigList?.toString()} {list.toString()}</p>
   </div>
   </body>
 );

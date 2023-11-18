@@ -1,8 +1,13 @@
 {
   "extends": "create-foxglove-extension/tsconfig/tsconfig.json",
 
-  "include": ["./src/**/*"],
+  "include": ["./src/**/*","./src/**/*.json",
+  "./src/**/*.ts"],
   "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "parameter_types": ["./types"]
+    },
     "rootDir": "./src",
     "outDir": "./dist",
     "lib": [ "es2021","dom"],
@@ -15,6 +20,7 @@
     // Additional TypeScript error reporting checks are enabled by default to improve code quality.
     // Enable/disable these checks as necessary to suit your coding preferences or work with
     // existing code
+    "resolveJsonModule": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
