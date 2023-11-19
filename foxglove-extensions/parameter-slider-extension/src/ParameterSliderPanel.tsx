@@ -584,6 +584,7 @@ if(colorScheme == "light") {
 
   };
   
+
   inputStyle = {
 
     fontSize: "1rem",
@@ -592,8 +593,7 @@ if(colorScheme == "light") {
     color: "#f7f7f7",
     border: "1px solid #4d4d4d",
     borderRadius: "3px",
-    marginBottom: "2px",
-
+    width: "75px"
   };
 
 }
@@ -697,9 +697,12 @@ return (
             // If properties are not available, skip rendering
             return null;
           }
-
+          let bc = index % 2 === 0 ? "#808080" : "white";
+          if (colorScheme === "dark") {
+            bc = index % 2 === 0 ? "#1a1a1a" : "#333333";
+          }
           return (
-            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.5fr 1.0fr", background: index % 2 === 0 ? "#808080.." : "white", padding: "4px"}}>
+            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.5fr 1.0fr", backgroundColor: bc, padding: "4px"}}>
               <div style={{ margin: "0px" }}>{result.name}:</div>
               {/* <div style={{ margin: "0px"}}>{getType(result)}</div> */}
               <div style={{ margin: "0px"}}>{createInputOnlyBox(result)}</div>
