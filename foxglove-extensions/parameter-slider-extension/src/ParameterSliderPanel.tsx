@@ -21,52 +21,11 @@ const nodeConfigListInit: NodeConfig[] = [
         name: "leaf_size",
         min_value: 0.0,
         max_value: 1.0,
-        step: 0.1,
+        step: 0.01,
       },
       {
         name: "detector",
-        dropdownOptions: ["euclidean", "dbscan"],
-        step: 1,
-      },
-      {
-        name: "dbscan.epsilon",
-        min_value: 0.0,
-        max_value: 10.0,
-        step: 0.1,
-      },
-      {
-        name: "dbscan.min_points",
-        min_value: 0,
-        max_value: 100,
-        step: 5,
-      },
-      {
-        name: "euclidean.cluster_tolerance",
-        min_value: 0.0,
-        max_value: 10.0,
-        step: 0.1,
-      },
-      {
-        name: "euclidean.min_points",
-        min_value: 0,
-        max_value: 100,
-        step: 1,
-      },
-    ],
-  },
-  {
-    name: "/my_talker",
-    parameters: [
-      {
-        name: "leaf_size",
-        min_value: 0.0,
-        max_value: 3.0,
-        step: 0.1,
-      },
-      {
-        name: "detector",
-        dropdownOptions: ["detector", "dbscan"],
-        step: 1,
+        dropdownOptions: ["euclidean", "dbscan"]
       },
       {
         name: "dbscan.epsilon",
@@ -93,7 +52,7 @@ const nodeConfigListInit: NodeConfig[] = [
         step: 1,
       },
     ],
-  },
+  }
 ];
 
 
