@@ -45,5 +45,5 @@ def generate_launch_description():
     return LaunchDescription([
         urdf_package_path_launch_arg,
         urdf_launch,
-        # tf_base_link_ned_to_base_link_enu
+        tf_base_link_ned_to_base_link_enu
     ])

@@ -3,13 +3,11 @@
 <package format="3">
   <name>thruster_visualization</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Thruster visualization for ASV Freya</description>
   <maintainer email="aleksos@ntnu.no">aleksos</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <depend>rclcpp</depend>
-  <depend>std_msgs</depend>
-  <depend>geometry_msgs</depend>
   <depend>foxglove_bridge</depend>
   <depend>visualization_msgs</depend>
   <depend>tf2</depend>
