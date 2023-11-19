@@ -1,9 +1,9 @@
-import { PanelExtensionContext} from "@foxglove/studio";
+import {PanelExtensionContext, RenderState} from "@foxglove/studio";
 import { useLayoutEffect, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { Slider } from '@mui/material';
 import type {NodeConfig, Parameter, ParameterProperties, ParameterValue, SetSrvParam} from "parameter_types";
-import * as nodeParams from './nodeparams.json';
+
 
 
 
@@ -11,7 +11,93 @@ import * as nodeParams from './nodeparams.json';
 let node: NodeConfig;
 let paramNameList: string[];
 let paramValList: ParameterValue[];
-let list: NodeConfig[] = nodeParams;
+
+// input name of node along with optinal properties of parameters (include '/' before node name to be compatible with service calls)
+const nodeConfigListInit: NodeConfig[] = [
+  {
+    name: "/pcl_detector_node",
+    parameters: [
+      {
+        name: "leaf_size",
+        min_value: 0.0,
+        max_value: 1.0,
+        step: 0.1,
+      },
+      {
+        name: "detector",
+        dropdownOptions: ["euclidean", "dbscan"],
+        step: 1,
+      },
+      {
+        name: "dbscan.epsilon",
+        min_value: 0.0,
+        max_value: 10.0,
+        step: 0.1,
+      },
+      {
+        name: "dbscan.min_points",
+        min_value: 0,
+        max_value: 100,
+        step: 5,
+      },
+      {
+        name: "euclidean.cluster_tolerance",
+        min_value: 0.0,
+        max_value: 10.0,
+        step: 0.1,
+      },
+      {
+        name: "euclidean.min_points",
+        min_value: 0,
+        max_value: 100,
+        step: 1,
+      },
+    ],
+  },
+  {
+    name: "/my_talker",
+    parameters: [
+      {
+        name: "leaf_size",
+        min_value: 0.0,
+        max_value: 3.0,
+        step: 0.1,
+      },
+      {
+        name: "detector",
+        dropdownOptions: ["detector", "dbscan"],
+        step: 1,
+      },
+      {
+        name: "dbscan.epsilon",
+        min_value: 0.0,
+        max_value: 10.0,
+        step: 0.1,
+      },
+      {
+        name: "dbscan.min_points",
+        min_value: 0,
+        max_value: 100,
+        step: 1,
+      },
+      {
+        name: "euclidean.cluster_tolerance",
+        min_value: 0.0,
+        max_value: 10.0,
+        step: 0.1,
+      },
+      {
+        name: "euclidean.min_points",
+        min_value: 0,
+        max_value: 100,
+        step: 1,
+      },
+    ],
+  },
+];
+
+
+
 
 function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): JSX.Element {
   
@@ -31,7 +117,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
 
   useLayoutEffect( () => {
     
-    context.onRender = (renderState, done) => { 
+    context.onRender = (renderState: RenderState, done) => { 
       setRenderDone(() => done); 
       updateNodeList();
 
@@ -47,9 +133,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
       }
     };
 
-    //If new topics are found, context.onRender() will update the list of nodes
-    // context.watch("topics");
-
+ 
     //If colorScheme changes, context.onRender() will change styling to match new color scheme
     context.watch("colorScheme");
 
@@ -113,13 +197,13 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
   }
 
 /**
-//    * Updates the list of nodes when a new node appears
+//    * Updates the list of nodes upon initialization of the panel based on the content 
 //    */
 const updateNodeList = () => {
   setStatus("retreiving nodes...")
   // context.callService?.("/rosapi/nodes", {})
   // .then((_values: unknown) =>{ 
-    setNodeList(nodeParams);
+    setNodeList(nodeConfigListInit);
     setStatus("nodes retreived");  
   }
 
@@ -193,10 +277,14 @@ let paramTypeList: string[] = ["boolean", "integer", "double", "string", "byte_a
  * @param paramVal The given Parameter Value
  * @returns paramVal's parameter type
  */
-const getType = (paramVal: ParameterValue) => {
-  if (paramVal === undefined)
+const getType = (param: Parameter) => {
+  let parameterProperties: ParameterProperties | null = getPropertiesOfParam(param);
+  if(!parameterProperties){
+    return;
+  }
+  if (param.value === undefined)
     return "undefined";
-  return paramTypeList[paramVal.type - 1];
+  return paramTypeList[param.value.type - 1];
 }
 
 /**
@@ -309,17 +397,21 @@ const getPropertiesOfParam = (param: Parameter) => {
 
   
 /**
- * Creates a dropdown input box if param is a boolean, creates a slider if param is int or double or inputbox otherwise
+ * Creates a dropdown input box if param is a boolean or dropdownOptions are specified, creates a slider if param is int or double or inputbox otherwise
  * @param   param The parameter that an input box is being created for
- * @returns A dropdown if param.value.type == 1, slider if param.value.type==2 | 3
+ * @returns A dropdown if param.value.type == 1 or dropdownOptions are defined, slider if param.value.type==2 or 3
  */
 const createInputBox = (param: Parameter) => {
   let parameterProperties: ParameterProperties | null = getPropertiesOfParam(param);
+  if(!parameterProperties){
+    return;
+  }
   if(parameterProperties?.dropdownOptions){
     return (
       <select
+        value={getParameterValue(param.value)}
         style={dropDownStyle}
-        onChange={(event) => updateSrvParamList(param.name, event.target.value)}
+        onChange={(event) => handleSliderandDropdownChange(param.name, event.target.value)}
       >
          <option selected hidden></option>
       {parameterProperties.dropdownOptions.map((option, index) => (
@@ -335,8 +427,9 @@ const createInputBox = (param: Parameter) => {
   if (param.value.type === 1) {
     return (
       <select
+        value={getParameterValue(param.value)}
         style={dropDownStyle}
-        onChange={(event) => updateSrvParamList(param.name, event.target.value)}
+        onChange={(event) => handleSliderandDropdownChange(param.name, event.target.value)}
       >
         <option selected hidden></option>
           <option>true</option>
@@ -349,10 +442,10 @@ const createInputBox = (param: Parameter) => {
         style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
         min={parameterProperties?.min_value ?? 0}
         max={parameterProperties?.max_value ?? 50}
-        step={1}
+        step={parameterProperties?.step ?? 1}
         valueLabelDisplay="auto"
         value={parseInt(getParameterValue(param.value), 10)}
-        onChangeCommitted={(_, value) => handleSliderChange(param.name, value.toString())}
+        onChangeCommitted={(_, value) => handleSliderandDropdownChange(param.name, value.toString())}
       />
     );
   }
@@ -362,10 +455,10 @@ const createInputBox = (param: Parameter) => {
         style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
         min={parameterProperties?.min_value ?? 0}
         max={parameterProperties?.max_value ?? 5}
-        step={0.1}
+        step={parameterProperties?.step ?? 0.1}
         valueLabelDisplay="auto"
         value={parseFloat(getParameterValue(param.value))}
-        onChangeCommitted={(_, value) => handleSliderChange(param.name, value.toString())}
+        onChangeCommitted={(_, value) => handleSliderandDropdownChange(param.name, value.toString())}
       />
     );
   }
@@ -378,7 +471,7 @@ const createInputBox = (param: Parameter) => {
   );
 };
 
-const handleSliderChange = (name: string, value: string) => {
+const handleSliderandDropdownChange = (name: string, value: string) => {
   updateSrvParamList(name, value.toString());
   setParam();
 };
@@ -389,6 +482,10 @@ const handleSliderChange = (name: string, value: string) => {
  * @returns inputbox
  */
 const createInputOnlyBox = (param: Parameter) => {
+  let parameterProperties: ParameterProperties | null = getPropertiesOfParam(param);
+  if(!parameterProperties){
+    return;
+  }
   return (
     <input
       style={inputStyle}
@@ -398,45 +495,45 @@ const createInputOnlyBox = (param: Parameter) => {
   );
 };
 
-/**
- * loads parameter values from a YAML file and sets all new values
- * @param files the YAML file to be uploaded
- */
-const loadFile = (files: FileList | null) => { 
-  if(files !== null) {
-    files[0]?.text()
-    .then((value: string) => {      
-      value = value.replaceAll(/[^\S\r\n]/gi, "");
-      value = value.replace(node + ":\n", "");
-      value = value.replace("ros__parameters:\n", "");
+  /**
+   * loads parameter values from a YAML file and sets all new values
+   * @param files the YAML file to be uploaded
+   */
+  const loadFile = (files: FileList | null) => { 
+    if(files !== null) {
+      files[0]?.text()
+      .then((value: string) => {      
+        value = value.replaceAll(/[^\S\r\n]/gi, "");
+        value = value.replace(node + ":\n", "");
+        value = value.replace("ros__parameters:\n", "");
 
-      let params: string[] = value.split("\n");
-      for(let i = 0; i < params.length; i++) {
+        let params: string[] = value.split("\n");
+        for(let i = 0; i < params.length; i++) {
 
-        if(params[i]!.charAt(0) != '-' && params[i]!.charAt(params[i]!.length - 1) != ':') {
-          let temp: string[]= params[i]!.split(":");
-          updateSrvParamList(temp[0]!, temp[1]!);
+          if(params[i]!.charAt(0) != '-' && params[i]!.charAt(params[i]!.length - 1) != ':') {
+            let temp: string[]= params[i]!.split(":");
+            updateSrvParamList(temp[0]!, temp[1]!);
 
-        } else if(params[i]!.charAt(params[i]!.length - 1) == ':') {
-          let tempName: string = params[i]!.replace(":", "").trim();
-          let tempVal: string = "";
+          } else if(params[i]!.charAt(params[i]!.length - 1) == ':') {
+            let tempName: string = params[i]!.replace(":", "").trim();
+            let tempVal: string = "";
 
-          while(i + 1 < params.length && params[++i]!.charAt(0) == '-') {
-            tempVal = tempVal.concat(params[i]!.replace("-", "").trim() + ",");
+            while(i + 1 < params.length && params[++i]!.charAt(0) == '-') {
+              tempVal = tempVal.concat(params[i]!.replace("-", "").trim() + ",");
+            }
+
+            i--;
+            tempVal = tempVal.substring(0, tempVal.length-1);
+            updateSrvParamList(tempName, tempVal);
           }
-
-          i--;
-          tempVal = tempVal.substring(0, tempVal.length-1);
-          updateSrvParamList(tempName, tempVal);
         }
-      }
-      setParam();
-    })
-    // .catch((error: Error) => {
-      // console.log(error)
-    // });
+        setParam();
+      })
+      .catch((error: Error) => {
+        console.log(error)
+      });
+    }
   }
-}
 
 ///////////////////////////////////////////////////////////////////
 //////////////////////// PANEL LAYOUT /////////////////////////////
@@ -594,8 +691,8 @@ return (
                 }}>
     <h1>ROS2 Parameter Extension</h1>
     <label style={labelStyle}>Node:</label>
-    {/* <select
-      value={node.name}
+    <select
+      value={node?.name}
       onChange={(event) => {
         // Find the selected node in the nodeList based on its name
         const selectedNode = nodeConfigList?.find(n => n.name === event.target.value);
@@ -613,9 +710,9 @@ return (
       >
       <option selected hidden>Select a Node</option>
       {(nodeConfigList ?? []).map((node) => (
-        <option key={node.name} value={node.name}>{node.name}</option>
+        <option key={node?.name} value={node?.name}>{node?.name}</option>
       ))}
-    </select> */}
+    </select>
 
     <form>
       <button 
@@ -648,21 +745,30 @@ return (
         <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px" }}>Value</b>
         <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px" }}>New Value</b>
         
-        {(paramList ?? []).map((result) => (
-          <>
-            <div style={{margin: "0px 4px 0px 4px"}} key={result.name}>{result.name}:</div>
-            <div style={{margin: "0px 4px 0px 4px"}}>{getType(result.value)}</div>
-            <div style={{margin: "0px 4px 0px 4px"}}>{createInputOnlyBox(result)}</div>
-            <div style={{margin: "0px 4px 0px 4px"}}> 
-              {createInputBox(result)}
-              </div>  
-          </>
-        ))}
+        {(paramList ?? []).map((result,index) => {
+          // Get the properties of the parameter
+          let parameterProperties: ParameterProperties | null = getPropertiesOfParam(result);
+
+          // Check if parameterProperties is undefined
+          if (!parameterProperties) {
+            // If properties are not available, skip rendering
+            return null;
+          }
+
+          return (
+            <>
+              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{result.name}:</div>
+              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{getType(result)}</div>
+              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{createInputOnlyBox(result)}</div>
+              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{createInputBox(result)}</div>
+            </>
+          );
+        })}
       </div>
     </form>
   </div>
   <div style={{left: "0px", bottom: "0px", height: "25px", width: "100%", position: "sticky"}}>
-    <p style={statusStyle}>status: {status} {nodeConfigList?.toString()} {list.toString()}</p>
+    <p style={statusStyle}>status: {status} {nodeConfigList?.toString()} </p>
   </div>
   </body>
 );

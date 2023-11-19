@@ -17,6 +17,9 @@
     "package": "foxglove-extension package",
     "pretest": "foxglove-extension pretest"
   },
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@foxglove/eslint-plugin": "0.20.0",
     "@foxglove/studio": "1.18.0",

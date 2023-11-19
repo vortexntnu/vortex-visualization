@@ -5,19 +5,21 @@ declare module "parameter_types" {
         parameters?: ParameterProperties[]; 
 
     }
+    
+    export type ParameterProperties = {
+        name?: string;
+        dropdownOptions?: (number | string)[];
+        min_value?: number
+        max_value?: number
+        step?: number
+        
+    }
 
     export type Parameter = {
         name: string;
         value: ParameterValue;       
     }
 
-    export type ParameterProperties = {
-        name?: string;
-        dropdownOptions?: (number | string)[];
-        min_value?: number
-        max_value?: number
-        
-    }
 
     export type ParameterValue = {
         type: number;
