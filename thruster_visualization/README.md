@@ -4,7 +4,7 @@ It subscribes on the thrust/thruster_forces topic and publishes the according ar
 
 The thruster placement and orientation is based on the one shown in freya.yaml. 
 
-'''
+ ```
     /\          /\
    /  \  front /  \
   /    \      /    \
@@ -16,4 +16,4 @@ The thruster placement and orientation is based on the one shown in freya.yaml.
   |    |      |    |
   |    |      |    |
   |=2↖=|==||==|=1↗=|
-'''
+ ```
