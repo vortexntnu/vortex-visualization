@@ -111,7 +111,7 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
   const [nodeConfigList, setNodeList] = useState<NodeConfig[]>();
   const [colorScheme, setColorScheme] = useState<string>();
   const [bgColor, setBgColor] = useState("#d6d6d6");
-  const [loadButtonBgColor, setLoadButtonBgColor] = useState("#d6d6d6");
+  // const [loadButtonBgColor, setLoadButtonBgColor] = useState("#d6d6d6");
 
 
 
@@ -126,10 +126,10 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
       setColorScheme(renderState.colorScheme);
       if(renderState.colorScheme == "light") {
         setBgColor("#d6d6d6");
-        setLoadButtonBgColor("#d6d6d6");
+        // setLoadButtonBgColor("#d6d6d6");
       } else if (renderState.colorScheme == "dark") {
         setBgColor("#4d4d4d");
-        setLoadButtonBgColor("#4d4d4d");
+        // setLoadButtonBgColor("#4d4d4d");
       }
     };
 
@@ -207,12 +207,6 @@ const updateNodeList = () => {
     setStatus("nodes retreived");  
   }
 
-
-
-
-
-
-
 /**
  * Retrieves a list of all parameters for the current node and their values
  */
@@ -267,24 +261,6 @@ const setParam = () => {
     updateParamList();
     setStatus("Error: " + JSON.stringify(error));
   });
-}
-
-
-let paramTypeList: string[] = ["boolean", "integer", "double", "string", "byte_array", "boolean_array", "integer_array", "double_array", "string_array"];
-
-/**
- * return the parameter type of the given parameter value
- * @param paramVal The given Parameter Value
- * @returns paramVal's parameter type
- */
-const getType = (param: Parameter) => {
-  let parameterProperties: ParameterProperties | null = getPropertiesOfParam(param);
-  if(!parameterProperties){
-    return;
-  }
-  if (param.value === undefined)
-    return "undefined";
-  return paramTypeList[param.value.type - 1];
 }
 
 /**
@@ -366,6 +342,11 @@ const updateSrvParamList = (name: string, val: string) => {
   });
 }
 
+/**
+ * Returns the properies of a parameter
+ * @param   param The parameter that is being checked
+ * @returns The properties of the parameter
+ */
 const getPropertiesOfParam = (param: Parameter) => {
 
   // Check if node is undefined
@@ -452,7 +433,7 @@ const createInputBox = (param: Parameter) => {
   else if (param.value.type === 3) {
     return (
       <Slider
-        style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333' }}
+        style={{ color: colorScheme === 'dark' ? '#f7f7f7' : '#333333'}}
         min={parameterProperties?.min_value ?? 0}
         max={parameterProperties?.max_value ?? 5}
         step={parameterProperties?.step ?? 0.1}
@@ -471,6 +452,11 @@ const createInputBox = (param: Parameter) => {
   );
 };
 
+/**
+ * Updates the parameter list with the new value of the parameter and invokes setParam()
+ * @param name The name of the parameter that will be set to 'value'
+ * @param value The new value of the parameter
+ */
 const handleSliderandDropdownChange = (name: string, value: string) => {
   updateSrvParamList(name, value.toString());
   setParam();
@@ -486,10 +472,14 @@ const createInputOnlyBox = (param: Parameter) => {
   if(!parameterProperties){
     return;
   }
+  let value = getParameterValue(param.value);
+  if (param.value.type === 3) {
+    value = parseFloat(value).toFixed(1);
+  }
   return (
     <input
       style={inputStyle}
-      placeholder={getParameterValue(param.value)}
+      placeholder={value}
       onChange={(event) => updateSrvParamList(param.name, event.target.value)}
     />
   );
@@ -499,41 +489,41 @@ const createInputOnlyBox = (param: Parameter) => {
    * loads parameter values from a YAML file and sets all new values
    * @param files the YAML file to be uploaded
    */
-  const loadFile = (files: FileList | null) => { 
-    if(files !== null) {
-      files[0]?.text()
-      .then((value: string) => {      
-        value = value.replaceAll(/[^\S\r\n]/gi, "");
-        value = value.replace(node + ":\n", "");
-        value = value.replace("ros__parameters:\n", "");
+  // const loadFile = (files: FileList | null) => { 
+  //   if(files !== null) {
+  //     files[0]?.text()
+  //     .then((value: string) => {      
+  //       value = value.replaceAll(/[^\S\r\n]/gi, "");
+  //       value = value.replace(node + ":\n", "");
+  //       value = value.replace("ros__parameters:\n", "");
 
-        let params: string[] = value.split("\n");
-        for(let i = 0; i < params.length; i++) {
+  //       let params: string[] = value.split("\n");
+  //       for(let i = 0; i < params.length; i++) {
 
-          if(params[i]!.charAt(0) != '-' && params[i]!.charAt(params[i]!.length - 1) != ':') {
-            let temp: string[]= params[i]!.split(":");
-            updateSrvParamList(temp[0]!, temp[1]!);
+  //         if(params[i]!.charAt(0) != '-' && params[i]!.charAt(params[i]!.length - 1) != ':') {
+  //           let temp: string[]= params[i]!.split(":");
+  //           updateSrvParamList(temp[0]!, temp[1]!);
 
-          } else if(params[i]!.charAt(params[i]!.length - 1) == ':') {
-            let tempName: string = params[i]!.replace(":", "").trim();
-            let tempVal: string = "";
+  //         } else if(params[i]!.charAt(params[i]!.length - 1) == ':') {
+  //           let tempName: string = params[i]!.replace(":", "").trim();
+  //           let tempVal: string = "";
 
-            while(i + 1 < params.length && params[++i]!.charAt(0) == '-') {
-              tempVal = tempVal.concat(params[i]!.replace("-", "").trim() + ",");
-            }
+  //           while(i + 1 < params.length && params[++i]!.charAt(0) == '-') {
+  //             tempVal = tempVal.concat(params[i]!.replace("-", "").trim() + ",");
+  //           }
 
-            i--;
-            tempVal = tempVal.substring(0, tempVal.length-1);
-            updateSrvParamList(tempName, tempVal);
-          }
-        }
-        setParam();
-      })
-      .catch((error: Error) => {
-        console.log(error)
-      });
-    }
-  }
+  //           i--;
+  //           tempVal = tempVal.substring(0, tempVal.length-1);
+  //           updateSrvParamList(tempName, tempVal);
+  //         }
+  //       }
+  //       setParam();
+  //     })
+  //     .catch((error: Error) => {
+  //       console.log(error)
+  //     });
+  //   }
+  // }
 
 ///////////////////////////////////////////////////////////////////
 //////////////////////// PANEL LAYOUT /////////////////////////////
@@ -543,7 +533,7 @@ const createInputOnlyBox = (param: Parameter) => {
 //////////////////////// CSS STYLING //////////////////////////////
 
 let setButtonStyle = {};
-let loadButtonStyle = {};
+// let loadButtonStyle = {};
 let dropDownStyle = {};
 let inputStyle = {};
 
@@ -562,18 +552,18 @@ if(colorScheme == "light") {
 
   };
 
-  loadButtonStyle = {
+  // loadButtonStyle = {
 
-    fontSize: "1rem",
-    backgroundColor: loadButtonBgColor,
-    border: loadButtonBgColor + " solid",
-    margin: "36px 0px 36px 12px",
-    padding: "8px",
-    borderRadius: "4px",
-    color: "#333333",
-    fontWeight: "500",
+  //   fontSize: "1rem",
+  //   backgroundColor: loadButtonBgColor,
+  //   border: loadButtonBgColor + " solid",
+  //   margin: "36px 0px 36px 12px",
+  //   padding: "8px",
+  //   borderRadius: "4px",
+  //   color: "#333333",
+  //   fontWeight: "500",
 
-  };
+  // };
 
   dropDownStyle = {
 
@@ -583,7 +573,7 @@ if(colorScheme == "light") {
     backgroundColor: "#f7f7f7",
     color: "#333333",
     borderRadius: "3px",
-
+    marginRight: "3px"
   };
 
   inputStyle = {
@@ -593,8 +583,7 @@ if(colorScheme == "light") {
     backgroundColor: "#f7f7f7",
     border: "1px solid #333333",
     borderRadius: "3px",
-    marginBottom: "2px",
-
+    width: "75px"
   };
 
 } else if(colorScheme == "dark") {
@@ -612,18 +601,18 @@ if(colorScheme == "light") {
 
   };
 
-  loadButtonStyle = {
+  // loadButtonStyle = {
 
-    fontSize: "1rem",
-    backgroundColor: loadButtonBgColor,
-    border: loadButtonBgColor + " solid",
-    margin: "36px 0px 36px 12px",
-    padding: "8px",
-    borderRadius: "4px",
-    color: "#f7f7f7",
-    fontWeight: "500",
+  //   fontSize: "1rem",
+  //   backgroundColor: loadButtonBgColor,
+  //   border: loadButtonBgColor + " solid",
+  //   margin: "36px 0px 36px 12px",
+  //   padding: "8px",
+  //   borderRadius: "4px",
+  //   color: "#f7f7f7",
+  //   fontWeight: "500",
 
-  };
+  // };
 
   dropDownStyle = {
 
@@ -724,27 +713,22 @@ return (
           Set Parameters
       </button>
 
-      <label 
+      {/* <label 
         style={loadButtonStyle} 
         onMouseEnter={() => setLoadButtonBgColor("#8f8f8f")} 
         onMouseLeave={() => colorScheme == "dark" ? setLoadButtonBgColor("#4d4d4d"): setLoadButtonBgColor("#d6d6d6")} 
         >
         <input type="file" style={{display: "none"}} onChange={(event) => {loadFile(event.target.files)}}/>
           Load
-      </label>
+      </label> */}
       <br/>
 
-      <label style={labelStyle}>Save to YAML</label>
-      <br/>
-
-      <label style={labelStyle}>Parameter List</label>
-      <br/>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 0.75fr 1fr 0.75fr", rowGap: "0.2rem",  }}>
-        <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px" , }}>Parameter</b>
-        <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px" }}>Type</b>
-        <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px" }}>Value</b>
-        <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px" }}>New Value</b>
-        
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.5fr 1.0fr"}}>
+        <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px", textDecoration: "bold"}}>Parameter</b>
+        {/* <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px", textDecoration: "bold"}}>Type</b> */}
+        <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px", textDecoration: "bold"}}>Value</b>
+        <b style={{ borderBottom: "1px solid", padding: "2px", marginBottom: "3px", textDecoration: "bold"}}>New Value</b>
+      </div>
         {(paramList ?? []).map((result,index) => {
           // Get the properties of the parameter
           let parameterProperties: ParameterProperties | null = getPropertiesOfParam(result);
@@ -756,15 +740,14 @@ return (
           }
 
           return (
-            <>
-              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{result.name}:</div>
-              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{getType(result)}</div>
-              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{createInputOnlyBox(result)}</div>
-              <div style={{ margin: "0px 4px 0px 4px", background: index % 2 === 0 ? "grey" : "white" }}>{createInputBox(result)}</div>
-            </>
+            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.5fr 1.0fr", background: index % 2 === 0 ? "#808080.." : "white", padding: "4px"}}>
+              <div style={{ margin: "0px" }}>{result.name}:</div>
+              {/* <div style={{ margin: "0px"}}>{getType(result)}</div> */}
+              <div style={{ margin: "0px"}}>{createInputOnlyBox(result)}</div>
+              <div style={{ margin: "0px"}}>{createInputBox(result)}</div>
+            </div>
           );
         })}
-      </div>
     </form>
   </div>
   <div style={{left: "0px", bottom: "0px", height: "25px", width: "100%", position: "sticky"}}>
