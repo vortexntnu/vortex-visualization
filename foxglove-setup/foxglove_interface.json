@@ -1,13 +1,17 @@
 {
   "configById": {
     "Tab!2stsle7": {
-      "activeTabIdx": 2,
+      "activeTabIdx": 0,
       "tabs": [
         {
           "title": "Diagnostics",
           "layout": {
             "direction": "column",
-            "second": "DiagnosticStatusPanel!2eafyct",
+            "second": {
+              "first": "DiagnosticStatusPanel!2eafyct",
+              "second": "Indicator!1ogphbu",
+              "direction": "row"
+            },
             "first": "DiagnosticSummary!1eu78ri"
           }
         },
@@ -31,27 +35,59 @@
       ]
     },
     "DiagnosticSummary!1eu78ri": {
-      "minLevel": 0,
+      "minLevel": 1,
       "pinnedIds": [
         "||zed_node: ZED Diagnostic|"
       ],
       "hardwareIdFilter": "",
-      "topicToRender": "/diagnostics",
+      "topicToRender": "/sensor/seapath/diagnostic_array",
       "sortByLevel": true,
-      "secondsUntilStale": 5
+      "secondsUntilStale": 0
     },
     "DiagnosticStatusPanel!2eafyct": {
-      "topicToRender": "/diagnostics",
-      "selectedHardwareId": "Stereolabs camera: zed2i",
+      "topicToRender": "/sensor/seapath/diagnostic_array",
+      "selectedHardwareId": "",
       "collapsedSections": [],
-      "selectedName": "zed_node: ZED Diagnostic"
+      "selectedName": "Diagnostic_connection_to_socket_status"
+    },
+    "Indicator!1ogphbu": {
+      "path": "",
+      "style": "bulb",
+      "fallbackColor": "#a0a0a0",
+      "fallbackLabel": "False",
+      "rules": [
+        {
+          "operator": "=",
+          "rawValue": "1",
+          "color": "#e20000",
+          "label": "Rød"
+        },
+        {
+          "operator": "=",
+          "rawValue": "2",
+          "color": "#edec00",
+          "label": "Gul"
+        },
+        {
+          "operator": "=",
+          "rawValue": "3",
+          "color": "#00ff33",
+          "label": "Grønn"
+        },
+        {
+          "operator": "=",
+          "rawValue": "4",
+          "color": "#1f00e2",
+          "label": "Blå"
+        }
+      ]
     },
     "RawMessages!2j3knpg": {
       "diffEnabled": false,
       "diffMethod": "previous message",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "/tf_static"
+      "topicPath": "/sensor/seapath/diagnostic_msg"
     },
     "Parameters!456osk1": {
       "title": "Parameters"
@@ -108,14 +144,15 @@
     "Gauge!2yoo6wn": {
       "path": "",
       "minValue": 0,
-      "maxValue": 1,
+      "maxValue": 100,
       "colorMap": "rainbow",
       "colorMode": "gradient",
       "gradient": [
         "#9f110eff",
         "#6bc1daff"
       ],
-      "reverse": false
+      "reverse": false,
+      "foxglovePanelTitle": "Battery precentage"
     },
     "Image!3ooqsae": {
       "cameraState": {
@@ -174,13 +211,13 @@
     "3D!233at6n": {
       "cameraState": {
         "perspective": true,
-        "distance": 2.8479148269151957,
-        "phi": 73.72400057907582,
-        "thetaOffset": 176.50748112882619,
+        "distance": 7.547072050672502,
+        "phi": 0.567880635810651,
+        "thetaOffset": 50.45069894664304,
         "targetOffset": [
-          -0.21832260856490476,
-          0.38188016794407487,
-          2.291335955618502e-16
+          -2.137312103411725,
+          -0.009250049596367611,
+          2.340840166957996e-16
         ],
         "target": [
           0,
@@ -289,12 +326,12 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {},
-      "followTf": "os_lidar"
+      "followTf": "base_link_SEU"
     },
     "map!1pik150": {
       "center": {
-        "lat": 63.44051370351408,
-        "lon": 10.426497459411623
+        "lat": 63.433556992318316,
+        "lon": 10.394462125495341
       },
       "customTileUrl": "",
       "disabledTopics": [],
@@ -307,13 +344,13 @@
     "3D!1j5zwes": {
       "cameraState": {
         "perspective": true,
-        "distance": 6.811232525623304,
-        "phi": 56.555540115955296,
+        "distance": 6.81123252562286,
+        "phi": 56.555540115955644,
         "thetaOffset": 131.33597535017205,
         "targetOffset": [
-          0.6280982759280421,
-          0.0955456904372521,
-          1.4283392993186786e-15
+          -1.2796935730157886,
+          -0.7810389508330593,
+          1.394360427978297e-15
         ],
         "target": [
           0,
@@ -464,7 +501,7 @@
       "followTf": "os_lidar"
     },
     "Tab!3nhm9up": {
-      "activeTabIdx": 4,
+      "activeTabIdx": 0,
       "tabs": [
         {
           "title": "ROS Status",
