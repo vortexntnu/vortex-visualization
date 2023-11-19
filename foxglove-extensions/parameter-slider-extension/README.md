@@ -4,6 +4,12 @@
 
 [Foxglove Studio](https://github.com/foxglove/studio) allows developers to create extensions, or custom code that is loaded and executed inside the Foxglove Studio application. This can be used to add custom panels. Extensions are authored in TypeScript using the `@foxglove/studio` SDK.
 
+This extension requires a foxglove bridge to work. Source your ros2 workspace and run the `foxglove bridge` executable to launch the `foxglove bridge`.
+
+```sh
+sudo ros2 run foxglove_bridge foxglove_bridge
+```
+
 ## Installation setup
 
 Extension development uses the `npm` package manager to install development dependencies and run build scripts.
@@ -89,5 +95,9 @@ All the properties of a `ParameterProperties` type are optional and will be set 
 Defining `dropdownOptions` is useful when dealing with a parameter that only has a few valid values. If `dropdownOptions` it will create a custum dropdownbox where easily choose between the valid values of the parameter. Not that if a parameter is of `boolean` type it will automatically be assigned a dropdownbox.
 
 The remaining optinal properties of the parameter are used when initializing the slider for the parameter if the parameter is of the `boolean` type. Since they are optional they will be assigned to default values if not specified.
+
+
+## TODO
+The template for loading and setting parameters from a `.yaml` file is currently commented out in the `/src/ParameterSliderPanel.tsx` file. Develop this at your own free will `:)`
 
 
