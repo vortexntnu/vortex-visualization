@@ -24,10 +24,20 @@ If installation was successful you should now have node.js installed
 ```sh
 node -v
 ```
-Should now return `v20.8.0` or a newer version.
+Should now return `v20.8.0` or a newer version. If you still have an older version you need to install a newer one using NVM. First run
+```sh
+sudo apt install curl 
+curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash 
+```
+The nvm installer script creates an environment entry to the login script of the current user. You can either log out and log in again to load the environment or execute the below command to do the same.
 
+```sh
+source ~/.bashrc
+nvm install node 
+```
+You should now have the latest version of node
 
-To install necessary extension dependencies, run `npm` from the root of the extension package `parameter-slider-extension`.
+To install necessary extension dependencies, run `npm` from the root of the extension package `/foxglove-extensions/parameter-slider-extension`.
 
 ```sh
 npm install
