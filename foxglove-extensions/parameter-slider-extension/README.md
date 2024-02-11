@@ -1,6 +1,6 @@
 # parameter-slider-extension
 
-## _A Foxglove Studio Extension_
+## A Foxglove Studio Extension
 
 [Foxglove Studio](https://github.com/foxglove/studio) allows developers to create extensions, or custom code that is loaded and executed inside the Foxglove Studio application. This can be used to add custom panels. Extensions are authored in TypeScript using the `@foxglove/studio` SDK.
 
