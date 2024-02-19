@@ -68,14 +68,10 @@ void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::Vi
 
         vortex::prob::Gauss2d gauss(position, position_covariance);
 
-        std::cout << "Possition covariance: " << position_covariance << std::endl;
-
         vortex::plotting::Ellipse ellipse = gauss_to_ellipse(gauss, visualisation_data.gate_threshold);
 
         Eigen::Quaterniond q;
         q = Eigen::AngleAxisd(ellipse.angle*M_PI/180, Eigen::Vector3d::UnitZ());
-
-
 
         // Create a cylinder primitive
         cylinder.pose.position.x = visualisation_data.x_final.x;
@@ -96,6 +92,70 @@ void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::Vi
         cylinder.color.a = 0.3;
 
         scene_entity.cylinders.push_back(cylinder);
+
+        
+        foxglove_msgs::msg::LinePrimitive line;
+
+        line.type = 0; // Set the line's type
+        line.pose.position.x = 0.0;
+        line.pose.position.y = 0.0;
+        line.pose.position.z = 0.5;
+        line.pose.orientation.x = 0.0;
+        line.pose.orientation.y = 0.0;
+        line.pose.orientation.z = 0.0;
+        line.pose.orientation.w = 1.0;
+        line.thickness = 0.1; // Set the line's thickness
+        line.scale_invariant = false; // Set the line's scale invariant
+        line.color.r = 1.0; // Set the line's color
+        line.color.g = 0.0;
+        line.color.b = 0.0;
+        line.color.a = 1.0;
+
+        for (auto previous_position : visualisation_data.previous) {
+            geometry_msgs::msg::Point point;
+            point.x = previous_position.x;
+            point.y = previous_position.y;
+            point.z = 0.0;
+            line.points.push_back(point);
+        }
+        scene_entity.lines.push_back(line);
+
+
+        // Arrow for velocity
+        foxglove_msgs::msg::ArrowPrimitive arrow;
+
+        arrow.pose.position.x = visualisation_data.x_final.x;
+        arrow.pose.position.y = visualisation_data.x_final.y;
+        arrow.pose.position.z = 0.5;
+
+        arrow.pose.orientation.x = 0.0;
+        arrow.pose.orientation.y = 0.0;
+        arrow.pose.orientation.z = atan2(visualisation_data.x_final.v_y, visualisation_data.x_final.v_x);
+        arrow.pose.orientation.w = 1.0;
+
+        // Normalize the orientation quaternion
+        double orientation_magnitude = sqrt(arrow.pose.orientation.x * arrow.pose.orientation.x +
+                                            arrow.pose.orientation.y * arrow.pose.orientation.y +
+                                            arrow.pose.orientation.z * arrow.pose.orientation.z +
+                                            arrow.pose.orientation.w * arrow.pose.orientation.w);
+
+        arrow.pose.orientation.x /= orientation_magnitude;
+        arrow.pose.orientation.y /= orientation_magnitude;
+        arrow.pose.orientation.z /= orientation_magnitude;
+        arrow.pose.orientation.w /= orientation_magnitude;
+
+        double velocity_magnitude = sqrt(pow(visualisation_data.x_final.v_x, 2) + pow(visualisation_data.x_final.v_y, 2));
+                
+        arrow.shaft_length = velocity_magnitude*3;
+        arrow.shaft_diameter = 0.1;
+        arrow.head_length = 0.2;
+        arrow.head_diameter = 0.2;
+        arrow.color.r = 0.0;
+        arrow.color.g = 1.0;
+        arrow.color.b = 0.0;
+        arrow.color.a = 1.0;
+
+        scene_entity.arrows.push_back(arrow);
     }
 
     // Create a scene update message

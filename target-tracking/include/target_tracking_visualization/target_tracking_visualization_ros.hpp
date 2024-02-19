@@ -18,6 +18,7 @@ protected:
 
     void visualize_state(const vortex_msgs::msg::VisualizationDataArray &visualisation_data_array);
 
+
 private:
     rclcpp::Subscription<vortex_msgs::msg::VisualizationDataArray>::SharedPtr subscription_;
 
