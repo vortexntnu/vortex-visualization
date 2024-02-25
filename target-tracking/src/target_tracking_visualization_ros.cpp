@@ -53,8 +53,8 @@ void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::Vi
     scene_entity.timestamp = this->now(); // Set timestamp
     scene_entity.id = 1; // Set entity ID
     scene_entity.frame_id = "world_frame"; // Set entity frame ID
-    scene_entity.lifetime.sec = 0; // Set entity lifetime
-    scene_entity.lifetime.nanosec = 500000000;
+    scene_entity.lifetime.sec = 5; // Set entity lifetime
+    scene_entity.lifetime.nanosec = 0;
     scene_entity.frame_locked = false; // Set entity frame locked
 
     foxglove_msgs::msg::CylinderPrimitive cylinder;
@@ -70,17 +70,25 @@ void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::Vi
 
         vortex::plotting::Ellipse ellipse = gauss_to_ellipse(gauss, visualisation_data.gate_threshold);
 
-        Eigen::Quaterniond q;
-        q = Eigen::AngleAxisd(ellipse.angle*M_PI/180, Eigen::Vector3d::UnitZ());
+        double yaw_angle;
+
+        double vel_x = visualisation_data.x_final.v_x;
+        double vel_y = visualisation_data.x_final.v_y;
+
+        if (vel_x == 0) {
+            yaw_angle = vel_y > 0 ? M_PI / 2 : -M_PI / 2;
+        } else {
+            yaw_angle = std::atan2(vel_y, vel_x);
+        }
 
         // Create a cylinder primitive
         cylinder.pose.position.x = visualisation_data.x_final.x;
         cylinder.pose.position.y = visualisation_data.x_final.y;
         cylinder.pose.position.z = 0.5;
-        cylinder.pose.orientation.x = q.x();
-        cylinder.pose.orientation.y = q.y();
-        cylinder.pose.orientation.z = q.z();
-        cylinder.pose.orientation.w = q.w();
+        cylinder.pose.orientation.x = 0.0;
+        cylinder.pose.orientation.y = 0.0;
+        cylinder.pose.orientation.z = std::sin(yaw_angle / 2);
+        cylinder.pose.orientation.w = std::cos(yaw_angle / 2);
         cylinder.size.x = ellipse.a; 
         cylinder.size.y = ellipse.b; 
         cylinder.size.z = 2.0; 
