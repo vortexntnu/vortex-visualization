@@ -8,7 +8,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     ld = LaunchDescription()
-    package_name = 'urdf-models'
+    package_name = 'urdf_models'
     urdf_default_path = PathJoinSubstitution(['urdf', 'freya', 'ASV_MainAssembly.urdf'])
 
     # Declare the launch arguments (for this launch file)
