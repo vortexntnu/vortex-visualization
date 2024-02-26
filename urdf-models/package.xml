@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-    <name>urdf-models</name>
+    <name>urdf_models</name>
     <version>0.0.0</version>
     <description>Package for visualizing URDF models in rviz and Foxglove Studio</description>
     <maintainer email="kolaseirik@gmail.com">Eirik Kolås</maintainer>
