@@ -3,27 +3,6 @@
 
 using std::placeholders::_1;
 
-
-TargetTrackingVisualizationNode::TargetTrackingVisualizationNode(const rclcpp::NodeOptions &options)
-    : Node("target_tracking_visualization_node", options) {
-
-    // Define the quality of service profile for publisher and subscriber
-    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
-    qos_profile.reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
-    auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
-
-    subscription_ = create_subscription<vortex_msgs::msg::LandmarkArray>(
-        "target_tracking/landmarks", qos, std::bind(&TargetTrackingVisualizationNode::topic_callback, this, _1));
-
-    scene_entity_publisher_ = this->create_publisher<foxglove_msgs::msg::SceneUpdate>("scene_entity", 10);
-}
-
-void TargetTrackingVisualizationNode::topic_callback(const vortex_msgs::msg::LandmarkArray landmark_array) {
-
-
-    TargetTrackingVisualizationNode::visualize_state(landmark_array);
-}
-
 vortex::plotting::Ellipse gauss_to_ellipse(const vortex::prob::Gauss2d &gauss, double scaling)
 {
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> eigenSolver(gauss.cov());
@@ -49,8 +28,32 @@ vortex::plotting::Ellipse gauss_to_ellipse(const vortex::prob::Gauss2d &gauss, d
   return ellipse;
 }
 
-void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::LandmarkArray &landmark_array) 
-{
+TargetTrackingVisualizationNode::TargetTrackingVisualizationNode(const rclcpp::NodeOptions &options)
+    : Node("target_tracking_visualization_node", options) {
+    
+    gate_threshold_ = 1.5;
+    gate_min_threshold_ = 0.5;
+    gate_max_threshold_ = 2.5;
+
+    // Define the quality of service profile for publisher and subscriber
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    qos_profile.reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+    auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+
+    landmark_subscription_ = create_subscription<vortex_msgs::msg::LandmarkArray>(
+        "target_tracking/landmarks", qos, std::bind(&TargetTrackingVisualizationNode::topic_callback, this, _1));
+
+    parameter_subscription_ = create_subscription<vortex_msgs::msg::ParameterArray>(
+        "target_tracking/parameters", qos, std::bind(&TargetTrackingVisualizationNode::parameter_callback, this, _1));
+
+    scene_entity_publisher_ = this->create_publisher<foxglove_msgs::msg::SceneUpdate>("scene_entity", 10);
+}
+
+void TargetTrackingVisualizationNode::topic_callback(const vortex_msgs::msg::LandmarkArray landmark_array) {
+    double gate_threshold = get_parameter("gate_threshold").as_double();
+    double gate_min_threshold = get_parameter("gate_min_threshold").as_double();
+    double gate_max_threshold = get_parameter("gate_max_threshold").as_double();
+
     // Create a scene entity message
     foxglove_msgs::msg::SceneEntity scene_entity;
     scene_entity.timestamp = this->now(); // Set timestamp
@@ -104,7 +107,15 @@ void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::La
 
             vortex::prob::Gauss2d gauss(position, position_covariance);
 
-            vortex::plotting::Ellipse ellipse = gauss_to_ellipse(gauss, 1.5); // Fix gate threshold param
+            vortex::plotting::Ellipse ellipse = gauss_to_ellipse(gauss, gate_threshold); // Fix gate threshold param
+
+            double a = ellipse.a;
+            a = (a < gate_min_threshold) ? gate_min_threshold : a;
+            a = (a > gate_max_threshold) ? gate_max_threshold : a;
+
+            double b = ellipse.b;
+            b = (b < gate_min_threshold) ? gate_min_threshold : b;
+            b = (b > gate_max_threshold) ? gate_max_threshold : b;
 
             // Create a cylinder primitive
             cylinder.pose.position.x = landmark.odom.pose.pose.position.x;
@@ -114,8 +125,8 @@ void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::La
             cylinder.pose.orientation.y = 0.0;
             cylinder.pose.orientation.z = landmark.odom.pose.pose.orientation.z;
             cylinder.pose.orientation.w = landmark.odom.pose.pose.orientation.w;
-            cylinder.size.x = ellipse.a; 
-            cylinder.size.y = ellipse.b; 
+            cylinder.size.x = a;
+            cylinder.size.y = b;
             cylinder.size.z = 2.0; 
             cylinder.bottom_scale = 1.0; 
             cylinder.top_scale = 1.0; 
@@ -198,4 +209,16 @@ void TargetTrackingVisualizationNode::visualize_state(const vortex_msgs::msg::La
 
     // Publish the scene entity
     scene_entity_publisher_->publish(update);
-};
+}
+
+void TargetTrackingVisualizationNode::parameter_callback(const vortex_msgs::msg::ParameterArray parameter_array) {
+    for (vortex_msgs::msg::Parameter parameter : parameter_array.parameters) {
+        if (parameter.name == "gate_threshold") {
+            gate_threshold_ = std::stod(parameter.value);
+        } else if (parameter.name == "gate_min_threshold") {
+            gate_min_threshold_ = std::stod(parameter.value);
+        } else if (parameter.name == "gate_max_threshold") {
+            gate_max_threshold_ = std::stod(parameter.value);
+        }
+    }
+}
