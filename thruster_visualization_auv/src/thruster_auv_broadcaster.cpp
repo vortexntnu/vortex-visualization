@@ -8,8 +8,8 @@ ThrusterVisualizationAUV::ThrusterVisualizationAUV() : Node("thruster_visualizat
         std::bind(&ThrusterVisualizationAUV::publish_markers, this));
 
     num_thrusters_ = 8;
-    std::vector<std::vector<double>> thruster_positions_(num_thrusters_, std::vector<double>(3, 0.0));
-    std::vector<std::vector<double>> thruster_orientations_(num_thrusters_, std::vector<double>(3, 0.0)); 
+    thruster_positions_ = std::vector<std::vector<double>>(num_thrusters_, std::vector<double>(3, 0.0));
+    thruster_orientations_ = std::vector<std::vector<double>>(num_thrusters_, std::vector<double>(3, 0.0));
 
     for (int i = 0; i < num_thrusters_; ++i) {
         this->declare_parameter<std::vector<double>>("thruster" + std::to_string(i) + "_position");
@@ -24,7 +24,6 @@ ThrusterVisualizationAUV::ThrusterVisualizationAUV() : Node("thruster_visualizat
 
 void ThrusterVisualizationAUV::publish_markers() {
     visualization_msgs::msg::MarkerArray marker_array;
-
     for (size_t i = 0; i < thruster_data_.size(); ++i)
     {
         visualization_msgs::msg::Marker marker;
@@ -41,13 +40,22 @@ void ThrusterVisualizationAUV::publish_markers() {
         marker.pose.position.z = thruster_positions_[i][2];
         
         tf2::Quaternion quat;
-        float thruster_angle = thruster_orientations_[i];
+        double thruster_angle_roll  = thruster_orientations_[i][0];
+        double thruster_angle_pitch = thruster_orientations_[i][1];
+        double thruster_angle_yaw   = thruster_orientations_[i][2];
         
         if (thruster_data_[i] < 0) {
-            thruster_angle += M_PI;
+            if (thruster_angle_yaw != 0)
+            {
+                thruster_angle_yaw += M_PI;
+            }
+            if (thruster_angle_pitch != 0)
+            {
+                thruster_angle_pitch += M_PI;
+            }
         }
 
-        quat.setRPY(0, 0, thruster_angle);
+        quat.setRPY(thruster_angle_roll, thruster_angle_pitch, thruster_angle_yaw);
         marker.pose.orientation = tf2::toMsg(quat);
 
         marker.scale.x = std::abs(thruster_data_[i])*0.05;
