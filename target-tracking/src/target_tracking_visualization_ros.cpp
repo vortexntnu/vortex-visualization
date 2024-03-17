@@ -1,5 +1,6 @@
 #include <target_tracking_visualization/target_tracking_visualization_ros.hpp>
 #include <vortex_msgs/msg/landmark_array.hpp>
+#include <vortex_filtering/vortex_filtering.hpp>
 
 using std::placeholders::_1;
 
@@ -50,16 +51,14 @@ TargetTrackingVisualizationNode::TargetTrackingVisualizationNode(const rclcpp::N
 }
 
 void TargetTrackingVisualizationNode::topic_callback(const vortex_msgs::msg::LandmarkArray landmark_array) {
+
     double gate_threshold = get_parameter("gate_threshold").as_double();
     double gate_min_threshold = get_parameter("gate_min_threshold").as_double();
     double gate_max_threshold = get_parameter("gate_max_threshold").as_double();
 
-    // Create a scene entity message
-    foxglove_msgs::msg::SceneEntity scene_entity;
-    scene_entity.timestamp = this->now(); // Set timestamp
-    scene_entity.id = 1; // Set entity ID
-    scene_entity.frame_id = "world_frame"; // Set entity frame ID
-    scene_entity.lifetime.sec = 5; // Set entity lifetime
+    TargetTrackingVisualizationNode::visualize_state(landmark_array);
+}
+
     scene_entity.lifetime.nanosec = 0;
     scene_entity.frame_locked = false; // Set entity frame locked
 
