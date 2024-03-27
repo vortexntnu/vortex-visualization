@@ -8,17 +8,17 @@ ThrusterVisualization::ThrusterVisualization() : Node("thruster_visualization_no
         std::bind(&ThrusterVisualization::publish_markers, this));
 
     thruster_positions_ = {
-        {-0.7, -0.5, 0.4},  // Thruster 0
-        {0.7, -0.5, 0.4},   // Thruster 1
-        {0.7, 0.5, 0.4},    // Thruster 2
-        {-0.7, 0.5, 0.4}    // Thruster 3
+        {-0.7, 0.5, 0.4},  // Thruster 0
+        {0.7, 0.5, 0.4},   // Thruster 1
+        {0.7, -0.5, 0.4},  // Thruster 2
+        {-0.7, -0.5, 0.4}  // Thruster 3
         };
 
     thruster_orientations_ = {
-        {3.0 * M_PI / 4.0}, // Thruster 0
-        {5*M_PI / 4.0},     // Thruster 1
-        {3.0 * M_PI / 4.0}, // Thruster 2
-        {5*M_PI / 4.0}      // Thruster 3
+        {5.0 * M_PI / 4.0}, // Thruster 0
+        {7.0 * M_PI / 4.0}, // Thruster 1
+        {5.0 * M_PI / 4.0}, // Thruster 2
+        {7.0 * M_PI / 4.0}  // Thruster 3
     };
 
     thruster_data_ = {0, 0, 0, 0};
