@@ -2,23 +2,24 @@
 
 ThrusterVisualization::ThrusterVisualization() : Node("thruster_visualization_node") {
     publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("visualization_marker", 10);
-    subscription_ = this->create_subscription<vortex_msgs::msg::ThrusterForces>("thrust/thruster_forces", 10, std::bind(&ThrusterVisualization::topic_callback, this, std::placeholders::_1));
+    subscription_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("thrust/thruster_forces", 10, std::bind(&ThrusterVisualization::topic_callback, this, std::placeholders::_1));
     timer_ = this->create_wall_timer(
         std::chrono::milliseconds(100),
         std::bind(&ThrusterVisualization::publish_markers, this));
 
+    // NOTE: These coordinates are in the base_link frame
     thruster_positions_ = {
-        {-0.7, -0.5, 0.4},  // Thruster 0
-        {0.7, -0.5, 0.4},   // Thruster 1
-        {0.7, 0.5, 0.4},    // Thruster 2
-        {-0.7, 0.5, 0.4}    // Thruster 3
+        {0.7, 0.5, 0.4},  // Thruster 0
+        {-0.7, 0.5, 0.4},   // Thruster 1
+        {-0.7, -0.5, 0.4},    // Thruster 2
+        {0.7, -0.5, 0.4}    // Thruster 3
         };
 
     thruster_orientations_ = {
-        {3.0 * M_PI / 4.0}, // Thruster 0
-        {5*M_PI / 4.0},     // Thruster 1
-        {3.0 * M_PI / 4.0}, // Thruster 2
-        {5*M_PI / 4.0}      // Thruster 3
+        {7.0 * M_PI / 4.0}, // Thruster 0
+        {1.0 * M_PI / 4.0}, // Thruster 1
+        {7.0 * M_PI / 4.0}, // Thruster 2
+        {1.0 * M_PI / 4.0}  // Thruster 3
     };
 
     thruster_data_ = {0, 0, 0, 0};
@@ -69,7 +70,9 @@ void ThrusterVisualization::publish_markers() {
     publisher_->publish(marker_array);
 }
 
-void ThrusterVisualization::topic_callback(const vortex_msgs::msg::ThrusterForces &msg) {
-    thruster_data_ = msg.thrust;
+void ThrusterVisualization::topic_callback(const std_msgs::msg::Float32MultiArray &msg) {
+    thruster_data_.clear();
+    for (float value : msg.data) {
+        thruster_data_.push_back(static_cast<double>(value));
 }
-
+}
