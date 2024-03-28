@@ -14,7 +14,7 @@
 #include <array>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <vortex_msgs/msg/thruster_forces.hpp>
+#include <std_msgs/msg/float32_multi_array.hpp>
 
 /**
  * @class ThrusterVisualization
@@ -38,10 +38,10 @@ class ThrusterVisualization : public rclcpp::Node {
          * @brief Callback function for setting thruster data equal to the thruster forces message.
          * @param msg The thruster forces message.
          */
-        void topic_callback(const vortex_msgs::msg::ThrusterForces &msg);
+        void topic_callback(const std_msgs::msg::Float32MultiArray &msg);
 
         rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
-        rclcpp::Subscription<vortex_msgs::msg::ThrusterForces>::SharedPtr subscription_;
+        rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscription_;
         rclcpp::TimerBase::SharedPtr timer_;
         std::vector<std::array<float, 3>> thruster_positions_;
         std::vector<float> thruster_orientations_;
