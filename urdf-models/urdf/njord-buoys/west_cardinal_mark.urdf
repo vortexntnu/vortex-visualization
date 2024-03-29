@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<robot name="west_cardinal_mark">
+
+  <link name="base">
+    <!-- Sphere part (bottom yellow) -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/> <!-- Position the sphere at the base -->
+      <geometry>
+        <sphere radius="0.2"/>
+      </geometry>
+      <material name="yellow">
+        <color rgba="1 1 0 1"/> <!-- Yellow color -->
+      </material>
+    </visual>
+
+    <!-- Cylinder part 1 (middle black) -->
+    <visual>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/> <!-- Position in the middle -->
+      <geometry>
+        <cylinder radius="0.07" length="0.4"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/> <!-- Black color -->
+      </material>
+    </visual>
+
+    <!-- Cylinder part 2 (top yellow) -->
+    <visual>
+      <origin xyz="0 0 0.5" rpy="0 0 0"/> <!-- Position on top of the middle cylinder -->
+      <geometry>
+        <cylinder radius="0.07" length="0.2"/>
+      </geometry>
+      <material name="yellow">
+        <color rgba="1 1 0 1"/> <!-- Yellow color -->
+      </material>
+    </visual>
+  </link>
+
+</robot>
