@@ -38,14 +38,17 @@ class ThrusterVisualization : public rclcpp::Node {
          * @brief Callback function for setting thruster data equal to the thruster forces message.
          * @param msg The thruster forces message.
          */
-        void topic_callback(const std_msgs::msg::Float32MultiArray &msg);
+        void thruster_forces_callback(const std_msgs::msg::Float32MultiArray &msg);
 
-        rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
-        rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscription_;
+        rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thruster_marker_publisher_;
+        rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr thruster_forces_subscriber_;
         rclcpp::TimerBase::SharedPtr timer_;
-        std::vector<std::array<float, 3>> thruster_positions_;
-        std::vector<float> thruster_orientations_;
+        std::vector<std::vector<double>> thruster_positions_;
+        std::vector<double> thruster_orientations_;
         std::vector<double> thruster_data_;
+        int num_thrusters_;
+        double total_force_magnitude_;
+        double total_force_orientation_;
 
 };
 
