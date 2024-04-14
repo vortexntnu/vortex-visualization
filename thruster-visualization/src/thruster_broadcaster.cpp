@@ -211,7 +211,7 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_torque_direction_m
     torque_direction_arrow.header.frame_id = frame_id;
     torque_direction_arrow.header.stamp = this->get_clock()->now();
     torque_direction_arrow.ns = "torque_direction_arrow";
-    torque_direction_arrow.id = id; // Unique ID, different from arc and other markers
+    torque_direction_arrow.id = id;
     torque_direction_arrow.type = visualization_msgs::msg::Marker::ARROW;
     torque_direction_arrow.action = visualization_msgs::msg::Marker::ADD;
 
