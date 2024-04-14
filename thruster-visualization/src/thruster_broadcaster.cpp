@@ -135,7 +135,6 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_total_force_marker
     total_force_marker.type = visualization_msgs::msg::Marker::ARROW;
     total_force_marker.action = visualization_msgs::msg::Marker::ADD;
 
-    // Position at the ASV's center
     total_force_marker.pose.position.x = 0.0;
     total_force_marker.pose.position.y = 0.0;
     total_force_marker.pose.position.z = 0.0;
@@ -175,7 +174,6 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_arc_marker(
     arc.type = visualization_msgs::msg::Marker::LINE_STRIP;
     arc.action = visualization_msgs::msg::Marker::ADD;
     
-    // Yellow
     arc.scale.x = 0.05; // Line width
     arc.color.r = 1.0;
     arc.color.g = 1.0;
@@ -217,7 +215,6 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_torque_direction_m
     torque_direction_arrow.type = visualization_msgs::msg::Marker::ARROW;
     torque_direction_arrow.action = visualization_msgs::msg::Marker::ADD;
 
-    // Arrow pointing in the direction of the rotation
     if (abs(total_torque_z) < 1.0) {
         torque_direction_arrow.scale.x = 0.0;  // Length of the arrow
         torque_direction_arrow.scale.y = 0.0; // Width of the arrow head
