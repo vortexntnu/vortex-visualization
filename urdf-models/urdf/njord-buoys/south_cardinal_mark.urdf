@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot name="south_cardinal_mark">
+
+  <link name="base">
+    <!-- Sphere part (top black) -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/> <!-- Position the sphere on top -->
+      <geometry>
+        <sphere radius="0.2"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/> <!-- Black color -->
+      </material>
+    </visual>
+
+    <!-- Cylinder part 1 (bottom yellow) -->
+    <visual>
+      <origin xyz="0 0 0.4" rpy="0 0 0"/> <!-- Position below the sphere -->
+      <geometry>
+        <cylinder radius="0.07" length="0.6"/>
+      </geometry>
+      <material name="yellow">
+        <color rgba="1 1 0 1"/> <!-- Yellow color -->
+      </material>
+    </visual>
+  </link>
+
+</robot>

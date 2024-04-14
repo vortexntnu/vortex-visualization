@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot name="north_cardinal_mark">
+
+  <link name="base">
+    <!-- Sphere part (bottom green) -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/> <!-- Position the sphere at the base -->
+      <geometry>
+        <sphere radius="0.2"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 1"/>
+      </material>
+    </visual>
+
+    <!-- Cylinder part 1 (top green) -->
+    <visual>
+      <origin xyz="0 0 0.4" rpy="0 0 0"/> <!-- Position above the sphere -->
+      <geometry>
+        <cylinder radius="0.07" length="0.6"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+</robot>
