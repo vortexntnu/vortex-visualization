@@ -5,7 +5,7 @@
 <robot
   name="ASV_MainAssembly">
   <link
-    name="base_link_SEU">
+    name="freya_model">
     <visual>
       <origin
         xyz="0 0 0"
