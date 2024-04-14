@@ -40,6 +40,16 @@ class ThrusterVisualization : public rclcpp::Node {
          */
         void thruster_forces_callback(const std_msgs::msg::Float32MultiArray &msg);
 
+
+        visualization_msgs::msg::Marker create_arc_marker(
+        const std::string& frame_id,
+        int id,
+        const geometry_msgs::msg::Point& center,
+        double radius,
+        double start_angle,
+        double end_angle,
+        int num_segments);
+
         rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thruster_marker_publisher_;
         rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr thruster_forces_subscriber_;
         rclcpp::TimerBase::SharedPtr timer_;

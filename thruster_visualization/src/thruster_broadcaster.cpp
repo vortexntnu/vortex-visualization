@@ -27,8 +27,10 @@ ThrusterVisualization::ThrusterVisualization() : Node("thruster_visualization_no
 void ThrusterVisualization::publish_markers() {
     visualization_msgs::msg::MarkerArray marker_array;
     double max_force = 100.0;
+    double max_torque = 100.0;
     double total_force_x = 0.0;
     double total_force_y = 0.0;
+    double total_torque_z = 0.0;
 
     for (size_t i = 0; i < thruster_data_.size(); ++i)
     {
@@ -70,8 +72,10 @@ void ThrusterVisualization::publish_markers() {
         marker.lifetime = rclcpp::Duration::from_seconds(0);
         double force_x = (thruster_data_[i]) * cos(thruster_orientations_[i]);
         double force_y = (thruster_data_[i]) * sin(thruster_orientations_[i]);
+        double torque_z = thruster_positions_[i][0] * force_y - thruster_positions_[i][1] * force_x;
         total_force_x += force_x;
         total_force_y += force_y;
+        total_torque_z += torque_z;
 
         marker_array.markers.push_back(marker);
     }
@@ -82,7 +86,7 @@ void ThrusterVisualization::publish_markers() {
     visualization_msgs::msg::Marker total_force_marker;
     total_force_marker.header.frame_id = "base_link";
     total_force_marker.header.stamp = this->get_clock()->now();
-    total_force_marker.ns = "thrusters";
+    total_force_marker.ns = "total_force_arrow";
     total_force_marker.id = thruster_data_.size();
     total_force_marker.type = visualization_msgs::msg::Marker::ARROW;
     total_force_marker.action = visualization_msgs::msg::Marker::ADD;
@@ -110,6 +114,77 @@ void ThrusterVisualization::publish_markers() {
     // Add the total force marker to the array
     marker_array.markers.push_back(total_force_marker);
 
+    // Visualize the total torque
+    double normalized_torque = std::min(std::abs(total_torque_z) / max_torque, 1.0);
+    double max_arc_degrees = 270.0;  // Maximum arc in degrees
+    double arc_degrees = normalized_torque * max_arc_degrees;
+    double arc_radians = arc_degrees * (M_PI / 180.0);  // Convert degrees to radians
+
+    geometry_msgs::msg::Point center;
+    center.x = 0.0;
+    center.y = 0.0;
+    center.z = -0.6;
+    double radius = 0.5;
+
+    double start_angle = 0;
+    double end_angle;
+    if (total_torque_z >= 0) {
+        // Counterclockwise rotation for positive torque
+        end_angle = start_angle + arc_radians;  // Expand counterclockwise
+    } else {
+        // Clockwise rotation for negative torque
+        end_angle = start_angle - arc_radians;  // Expand clockwise
+    }
+
+    int num_segments = 30; // Number of segments for the arc
+    
+    visualization_msgs::msg::Marker arc = create_arc_marker("base_link", thruster_data_.size()+1, center, radius, start_angle, end_angle, num_segments);
+    marker_array.markers.push_back(arc);
+
+    double angle_step = (end_angle - start_angle) / num_segments;
+    double final_angle = start_angle + num_segments * angle_step;
+
+    // Calculate the end point for the arrow
+    geometry_msgs::msg::Point end_point;
+    end_point.x = center.x + radius * cos(final_angle);
+    end_point.y = center.y + radius * sin(final_angle);
+    end_point.z = center.z;  // Same z-level as the arc
+
+    // Create the arrow marker
+    visualization_msgs::msg::Marker direction_arrow;
+    direction_arrow.header.frame_id = "base_link";
+    direction_arrow.header.stamp = this->get_clock()->now();
+    direction_arrow.ns = "torque_direction_arrow";
+    direction_arrow.id = thruster_data_.size() + 2; // Unique ID, different from arc and other markers
+    direction_arrow.type = visualization_msgs::msg::Marker::ARROW;
+    direction_arrow.action = visualization_msgs::msg::Marker::ADD;
+
+    // Arrow pointing in the direction of the rotation
+    if (total_torque_z == 0.0) {
+        direction_arrow.scale.x = 0.0;  // Length of the arrow
+        direction_arrow.scale.y = 0.0; // Width of the arrow head
+        direction_arrow.scale.z = 0.0; // Height of the arrow head
+    }
+    else {
+        direction_arrow.scale.x = 0.2;  // Length of the arrow
+        direction_arrow.scale.y = 0.05; // Width of the arrow head
+        direction_arrow.scale.z = 0.05; // Height of the arrow head
+    }
+
+    direction_arrow.color.r = 1.0;
+    direction_arrow.color.g = 1.0;
+    direction_arrow.color.b = 0.0;
+    direction_arrow.color.a = 1.0;
+
+    // Set the position of the arrow
+    direction_arrow.pose.position = end_point;
+
+    // Orient the arrow to point along the tangent to the arc at the endpoint
+    quat.setRPY(0, 0, final_angle + (total_torque_z >= 0 ? M_PI / 2 : -M_PI / 2));
+    direction_arrow.pose.orientation = tf2::toMsg(quat);
+
+     marker_array.markers.push_back(direction_arrow);
+
     thruster_marker_publisher_->publish(marker_array);
 }
 
@@ -118,4 +193,40 @@ void ThrusterVisualization::thruster_forces_callback(const std_msgs::msg::Float3
     for (float value : msg.data) {
         thruster_data_.push_back(static_cast<double>(value));
     }
+}
+
+visualization_msgs::msg::Marker ThrusterVisualization::create_arc_marker(
+    const std::string& frame_id,
+    int id,
+    const geometry_msgs::msg::Point& center,
+    double radius,
+    double start_angle,
+    double end_angle,
+    int num_segments)
+{
+    visualization_msgs::msg::Marker arc;
+    arc.header.frame_id = frame_id;
+    arc.header.stamp = rclcpp::Clock().now();
+    arc.ns = "torque_direction_arrow";
+    arc.id = id;
+    arc.type = visualization_msgs::msg::Marker::LINE_STRIP;
+    arc.action = visualization_msgs::msg::Marker::ADD;
+    
+    arc.scale.x = 0.05; // Line width
+    arc.color.r = 1.0;
+    arc.color.g = 1.0;
+    arc.color.b = 0.0;
+    arc.color.a = 1.0; // Alpha (opacity)
+    
+    double angle_step = (end_angle - start_angle) / num_segments;
+    for(int i = 0; i <= num_segments; ++i) {
+        double angle = start_angle + i * angle_step;
+        geometry_msgs::msg::Point p;
+        p.x = center.x + radius * cos(angle);
+        p.y = center.y + radius * sin(angle);
+        p.z = center.z;
+        arc.points.push_back(p);
+    }
+    
+    return arc;
 }
