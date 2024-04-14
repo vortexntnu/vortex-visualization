@@ -84,15 +84,13 @@ void ThrusterVisualization::publish_markers() {
 
     // Visualize the total force
     visualization_msgs::msg::Marker total_force_marker = create_total_force_marker(total_force_magnitude_, total_force_orientation_);
-
-    // Add the total force marker to the array
     marker_array.markers.push_back(total_force_marker);
 
     // Visualize the total torque
     double normalized_torque = std::min(std::abs(total_torque_z) / max_torque, 1.0);
-    double max_arc_degrees = 270.0;  // Maximum arc in degrees
+    double max_arc_degrees = 270.0; 
     double arc_degrees = normalized_torque * max_arc_degrees;
-    double arc_radians = arc_degrees * (M_PI / 180.0);  // Convert degrees to radians
+    double arc_radians = arc_degrees * (M_PI / 180.0);
 
     geometry_msgs::msg::Point center;
     center.x = 0.0;
@@ -103,13 +101,11 @@ void ThrusterVisualization::publish_markers() {
     double end_angle;
 
     if (total_torque_z >= 0) {
-        // Counterclockwise rotation for positive torque
-        end_angle = start_angle + arc_radians;  // Expand counterclockwise
+        end_angle = start_angle + arc_radians;
     } else {
-        // Clockwise rotation for negative torque
-        end_angle = start_angle - arc_radians;  // Expand clockwise
+        end_angle = start_angle - arc_radians;
     }
-    int num_segments = 30; // Number of segments for the arc
+    int num_segments = 30;
     
     visualization_msgs::msg::Marker arc = create_arc_marker("base_link", thruster_data_.size()+1, center, radius, start_angle, end_angle, num_segments);
     marker_array.markers.push_back(arc);
@@ -205,7 +201,7 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_torque_direction_m
     double radius,
     double final_angle, 
     double total_torque_z) {
-        
+
     // Calculate the end point for the arrow
     geometry_msgs::msg::Point end_point;
     end_point.x = center.x + radius * cos(final_angle);
