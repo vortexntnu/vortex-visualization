@@ -105,7 +105,7 @@ void ThrusterVisualization::publish_markers() {
     } else {
         end_angle = start_angle - arc_radians;
     }
-    int num_segments = 30;
+    int num_segments = 10;
     
     visualization_msgs::msg::Marker arc = create_arc_marker("base_link", thruster_data_.size()+1, center, radius, start_angle, end_angle, num_segments);
     marker_array.markers.push_back(arc);
