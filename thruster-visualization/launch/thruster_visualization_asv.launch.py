@@ -3,13 +3,14 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    trushter_visualization_node = Node(
+    thruster_visualization_node = Node(
             package='thruster_visualization',
             executable='thruster_visualization_node',
             name='thruster_visualization_node',
             output='screen',
             parameters=[{
-                #NOTE: These coordinates are in the base_link frame
+                'num_thrusters': 4,
+                #NOTE: These coordinates are in the base_link frame (NED)
                 'thruster0_position': [0.7, 0.5, 0.4],
                 'thruster0_orientation': 7.0 * pi / 4.0,
 
@@ -24,5 +25,5 @@ def generate_launch_description():
             }]
         )
     return LaunchDescription([
-        trushter_visualization_node
+        thruster_visualization_node
     ])

@@ -7,7 +7,9 @@ ThrusterVisualization::ThrusterVisualization() : Node("thruster_visualization_no
         std::chrono::milliseconds(100),
         std::bind(&ThrusterVisualization::publish_markers, this));
 
-    num_thrusters_ = 4;
+    this->declare_parameter<int>("num_thrusters", 0);
+    this->get_parameter("num_thrusters", num_thrusters_);
+
     thruster_positions_ = std::vector<std::vector<double>>(num_thrusters_, std::vector<double>(3, 0.0));
     thruster_orientations_ = std::vector<double>(num_thrusters_, 0.0);
 
@@ -19,7 +21,7 @@ ThrusterVisualization::ThrusterVisualization() : Node("thruster_visualization_no
         this->get_parameter("thruster" + std::to_string(i) + "_orientation", thruster_orientations_[i]);
     }
 
-    thruster_data_ = {0.0, 0.0, 0.0, 0.0};
+    thruster_data_ = std::vector<double>(num_thrusters_, 0.0);
     total_force_magnitude_ = 0.0;
     total_force_orientation_ = 0.0;
 }
@@ -31,7 +33,6 @@ void ThrusterVisualization::publish_markers() {
     double total_force_x = 0.0;
     double total_force_y = 0.0;
     double total_torque_z = 0.0;
-    tf2::Quaternion quat;
 
     for (size_t i = 0; i < thruster_data_.size(); ++i)
     {
@@ -54,6 +55,7 @@ void ThrusterVisualization::publish_markers() {
             thruster_angle += M_PI;
         }
 
+        tf2::Quaternion quat;
         quat.setRPY(0, 0, thruster_angle);
         marker.pose.orientation = tf2::toMsg(quat);
 
