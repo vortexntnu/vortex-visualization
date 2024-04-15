@@ -13,6 +13,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(vortex_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 include_directories(include)
 
@@ -22,6 +23,7 @@ tf2_ros
 visualization_msgs
 tf2_geometry_msgs
 vortex_msgs
+geometry_msgs
 )
 
 add_executable(${PROJECT_NAME}_node 
