@@ -1,27 +1,31 @@
 {
   "configById": {
     "Tab!2stsle7": {
-      "activeTabIdx": 0,
+      "activeTabIdx": 3,
       "tabs": [
         {
           "title": "Diagnostics",
           "layout": {
             "direction": "column",
-            "second": {
-              "first": "DiagnosticStatusPanel!2eafyct",
-              "second": "Indicator!1ogphbu",
-              "direction": "row"
-            },
+            "second": "DiagnosticStatusPanel!3p9sot2",
             "first": "DiagnosticSummary!1eu78ri"
           }
         },
         {
           "title": "Topic",
-          "layout": "RawMessages!2j3knpg"
+          "layout": {
+            "direction": "row",
+            "second": "RawMessages!3olpec3",
+            "first": "RawMessages!2j3knpg"
+          }
         },
         {
           "title": "Parameters",
           "layout": "Parameters!456osk1"
+        },
+        {
+          "title": "4",
+          "layout": "Image!3sicj09"
         }
       ]
     },
@@ -35,124 +39,186 @@
       ]
     },
     "DiagnosticSummary!1eu78ri": {
-      "minLevel": 1,
+      "minLevel": 0,
       "pinnedIds": [
-        "||zed_node: ZED Diagnostic|"
+        "||zed_node: ZED Diagnostic|",
+        "||Freya battery status 0|"
       ],
       "hardwareIdFilter": "",
-      "topicToRender": "/sensor/seapath/diagnostic_array",
+      "topicToRender": "/diagnostics",
       "sortByLevel": true,
-      "secondsUntilStale": 0
+      "secondsUntilStale": 5
     },
-    "DiagnosticStatusPanel!2eafyct": {
-      "topicToRender": "/sensor/seapath/diagnostic_array",
+    "DiagnosticStatusPanel!3p9sot2": {
+      "topicToRender": "/diagnostics",
       "selectedHardwareId": "",
-      "collapsedSections": [],
-      "selectedName": "Diagnostic_connection_to_socket_status"
-    },
-    "Indicator!1ogphbu": {
-      "path": "",
-      "style": "bulb",
-      "fallbackColor": "#a0a0a0",
-      "fallbackLabel": "False",
-      "rules": [
-        {
-          "operator": "=",
-          "rawValue": "1",
-          "color": "#e20000",
-          "label": "Rød"
-        },
-        {
-          "operator": "=",
-          "rawValue": "2",
-          "color": "#edec00",
-          "label": "Gul"
-        },
-        {
-          "operator": "=",
-          "rawValue": "3",
-          "color": "#00ff33",
-          "label": "Grønn"
-        },
-        {
-          "operator": "=",
-          "rawValue": "4",
-          "color": "#1f00e2",
-          "label": "Blå"
-        }
-      ]
+      "selectedName": "Freya battery status 0",
+      "collapsedSections": []
     },
     "RawMessages!2j3knpg": {
       "diffEnabled": false,
       "diffMethod": "previous message",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "/sensor/seapath/diagnostic_msg"
+      "topicPath": ""
+    },
+    "RawMessages!3olpec3": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": ""
     },
     "Parameters!456osk1": {
       "title": "Parameters"
     },
+    "Image!3sicj09": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "enableStats": false
+      },
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
     "RosOut!3hawevs": {
       "searchTerms": [],
-      "minLogLevel": 2
+      "minLogLevel": 2,
+      "nameFilter": {}
     },
-    "TopicGraph!3gijpuo": {},
     "Plot!1vtd7hh": {
       "paths": [
         {
           "timestampMethod": "receiveTime",
-          "value": "",
+          "value": "/asv/temperature/ESC1.data",
           "enabled": true,
-          "label": "Elhouse temp"
+          "label": "ESC 1 [C]"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ESC2.data",
+          "enabled": true,
+          "label": "ESC 2 [C]"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ESC3.data",
+          "enabled": true,
+          "label": "ESC 3 [C]"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ESC4.data",
+          "enabled": true,
+          "label": "ESC 4 [C]"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ambient1.data",
+          "enabled": true,
+          "label": "Ambient 1"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ambient2.data",
+          "enabled": true,
+          "label": "Ambient 2"
         }
       ],
       "showXAxisLabels": true,
       "showYAxisLabels": true,
       "showLegend": true,
       "legendDisplay": "floating",
-      "showPlotValuesInLegend": false,
-      "isSynced": true,
+      "showPlotValuesInLegend": true,
+      "isSynced": false,
       "xAxisVal": "timestamp",
-      "sidebarDimension": 240
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "ESC Temp",
+      "followingViewWidth": 60
     },
     "Plot!3cyssa": {
       "paths": [
         {
-          "value": "",
+          "value": "/asv/power_sense_module/current.data",
           "enabled": true,
-          "timestampMethod": "headerStamp",
-          "label": "Left Battery Voltage",
+          "timestampMethod": "receiveTime",
+          "label": "Current [A]",
           "showLine": true
-        },
-        {
-          "timestampMethod": "headerStamp",
-          "value": "",
-          "enabled": true,
-          "label": "Right Battery Voltage"
         }
       ],
       "showXAxisLabels": true,
       "showYAxisLabels": true,
       "showLegend": true,
       "legendDisplay": "floating",
-      "showPlotValuesInLegend": false,
+      "showPlotValuesInLegend": true,
       "isSynced": true,
       "xAxisVal": "timestamp",
       "sidebarDimension": 240,
-      "foxglovePanelTitle": "Batteries"
+      "foxglovePanelTitle": "Power Sense",
+      "followingViewWidth": 60
     },
-    "Gauge!2yoo6wn": {
-      "path": "",
-      "minValue": 0,
-      "maxValue": 100,
-      "colorMap": "rainbow",
-      "colorMode": "gradient",
-      "gradient": [
-        "#9f110eff",
-        "#6bc1daff"
+    "Plot!3qtaug1": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/power_sense_module/voltage.data",
+          "enabled": true,
+          "label": "Voltage"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/diagnostics.status[:]{hardware_id==\"\"}{name==\"Freya battery status 0\"}.values[:]{key==\"voltage\"}.value",
+          "enabled": true,
+          "label": "Battery 0"
+        }
       ],
-      "reverse": false,
-      "foxglovePanelTitle": "Battery precentage"
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Power Sense",
+      "followingViewWidth": 60,
+      "minYValue": 21,
+      "maxYValue": 25
     },
     "Image!3ooqsae": {
       "cameraState": {
@@ -202,22 +268,22 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {
-        "imageTopic": "/zed2/zed_node/rgb/image_rect_color",
-        "calibrationTopic": "/zed2/zed_node/rgb/camera_info",
+        "imageTopic": "/zed/zed_node/rgb/image_rect_color",
+        "calibrationTopic": "/zed/zed_node/rgb/camera_info",
         "synchronize": false
       },
-      "foxglovePanelTitle": ""
+      "foxglovePanelTitle": "Camera"
     },
     "3D!233at6n": {
       "cameraState": {
         "perspective": true,
-        "distance": 7.547072050672502,
-        "phi": 0.567880635810651,
-        "thetaOffset": 50.45069894664304,
+        "distance": 6.147137354469406,
+        "phi": 63.61570745821438,
+        "thetaOffset": -25.299835670636813,
         "targetOffset": [
-          -2.137312103411725,
-          -0.009250049596367611,
-          2.340840166957996e-16
+          -0.22646360744285368,
+          0.36885945977171103,
+          2.289382403190253e-16
         ],
         "target": [
           0,
@@ -285,7 +351,7 @@
           "visible": false
         },
         "/ouster/points": {
-          "visible": true,
+          "visible": false,
           "colorField": "intensity",
           "colorMode": "colormap",
           "colorMap": "turbo",
@@ -326,31 +392,31 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {},
-      "followTf": "base_link_SEU"
+      "followTf": "os_lidar"
     },
     "map!1pik150": {
       "center": {
-        "lat": 63.433556992318316,
-        "lon": 10.394462125495341
+        "lat": 63.426406611645305,
+        "lon": 10.441133305010807
       },
       "customTileUrl": "",
       "disabledTopics": [],
       "followTopic": "",
       "layer": "map",
       "topicColors": {},
-      "zoomLevel": 15,
+      "zoomLevel": 12,
       "maxNativeZoom": 18
     },
-    "3D!1j5zwes": {
+    "3D!183xwo9": {
       "cameraState": {
         "perspective": true,
-        "distance": 6.81123252562286,
-        "phi": 56.555540115955644,
-        "thetaOffset": 131.33597535017205,
+        "distance": 7.547072050663605,
+        "phi": 56.52715089438609,
+        "thetaOffset": -157.7686547916824,
         "targetOffset": [
-          -1.2796935730157886,
-          -0.7810389508330593,
-          1.394360427978297e-15
+          -0.5150806204872985,
+          0.1985261604088595,
+          -2.1053391901655328e-15
         ],
         "target": [
           0,
@@ -369,107 +435,83 @@
       },
       "followMode": "follow-pose",
       "scene": {
-        "syncCamera": false,
-        "enableStats": false,
-        "backgroundColor": "#000000",
         "meshUpAxis": "z_up",
-        "labelScaleFactor": 0.38
+        "transforms": {
+          "enablePreloading": true,
+          "showLabel": true,
+          "editable": false
+        }
       },
       "transforms": {
+        "frame:os_lidar": {
+          "visible": false
+        },
+        "frame:world_frame": {
+          "visible": true
+        },
+        "frame:base_link_SEU": {
+          "visible": false
+        },
         "frame:base_link": {
           "visible": false
-        },
-        "frame:base_link_ENU": {
-          "visible": false
-        },
-        "frame:os_lidar": {
-          "visible": true
         },
         "frame:zed2i_camera_center": {
           "visible": false
         },
-        "frame:map": {
-          "visible": false
+        "frame:seapath_frame": {
+          "visible": true
         },
-        "frame:odom": {
-          "visible": false
+        "frame:os_sensor": {
+          "visible": true
         },
-        "frame:zed2i_base_link": {
-          "visible": false
-        },
-        "frame:zed2i_left_camera_frame": {
-          "visible": false
-        },
-        "frame:zed2i_left_camera_optical_frame": {
-          "visible": false
-        },
-        "frame:zed2i_imu_link": {
-          "visible": false
-        },
-        "frame:zed2i_right_camera_optical_frame": {
-          "visible": false
-        },
-        "frame:zed2i_right_camera_frame": {
+        "frame:os_imu": {
           "visible": false
         }
       },
       "topics": {
         "/ouster/points": {
           "visible": true,
-          "stixelsEnabled": false,
-          "colorField": "reflectivity",
+          "colorField": "intensity",
           "colorMode": "colormap",
-          "colorMap": "rainbow",
-          "explicitAlpha": 1,
-          "pointShape": "circle",
-          "decayTime": 1.311
+          "colorMap": "turbo",
+          "pointSize": 3.29
         },
-        "/move_base_simple/goal": {
-          "visible": false
+        "/scene_entity": {
+          "visible": true
         },
-        "/ouster/nearir_image": {
-          "visible": false
+        "/lidar/centroids": {
+          "visible": false,
+          "colorField": "z",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "pointSize": 18.47
         },
-        "/ouster/range_image": {
-          "visible": false
-        },
-        "/ouster/reflec_image": {
-          "visible": false
+        "/robot_description": {
+          "visible": true,
+          "fallbackColor": "#000000"
         },
         "/ouster/scan": {
           "visible": false,
           "colorField": "intensity",
           "colorMode": "colormap",
-          "colorMap": "turbo"
-        },
-        "/ouster/signal_image": {
-          "visible": false
-        },
-        "/initialpose": {
-          "visible": false
-        },
-        "/robot_description": {
-          "visible": true,
-          "fallbackColor": "#e21d1d",
-          "displayMode": "auto"
-        },
-        "/zed2i/zed_node/point_cloud/cloud_registered": {
-          "visible": true,
-          "colorField": "rgb",
-          "colorMode": "rgb",
           "colorMap": "turbo",
-          "pointSize": 3
+          "pointSize": 8
         },
-        "/zed2/zed_node/point_cloud/cloud_registered": {
-          "visible": false
+        "/visualization_marker": {
+          "visible": true,
+          "namespaces": {
+            "thrusters": {
+              "visible": true
+            }
+          }
         }
       },
       "layers": {
-        "7142419f-2b10-446b-a26d-06fc0ddb9cf4": {
+        "e3af44db-a290-4c79-9cc7-fc6d5266a982": {
           "visible": true,
           "frameLocked": true,
           "label": "Grid",
-          "instanceId": "7142419f-2b10-446b-a26d-06fc0ddb9cf4",
+          "instanceId": "e3af44db-a290-4c79-9cc7-fc6d5266a982",
           "layerId": "foxglove.Grid",
           "size": 10,
           "divisions": 10,
@@ -498,34 +540,84 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {},
-      "followTf": "os_lidar"
+      "followTf": "base"
+    },
+    "Plot!1sda7vn": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/diagnostics.status[:]{hardware_id==\"\"}{name==\"Freya battery status 0\"}.values[:]{key==\"voltage\"}.value",
+          "enabled": true,
+          "label": "B0 [V]"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/diagnostics.status[:]{hardware_id==\"\"}{name==\"Freya battery status 1\"}.values[:]{key==\"voltage\"}.value",
+          "enabled": true,
+          "label": "B1 [V]"
+        }
+      ],
+      "minYValue": 21,
+      "maxYValue": 25,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 1000,
+      "foxglovePanelTitle": "Battery Voltage"
+    },
+    "Gauge!2yoo6wn": {
+      "path": "/diagnostics.status[:]{hardware_id==\"\"}{name==\"Freya battery status 0\"}.values[:]{key==\"voltage\"}.value",
+      "minValue": 21.5,
+      "maxValue": 25,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#9f110eff",
+        "#34de11ff"
+      ],
+      "reverse": false,
+      "foxglovePanelTitle": "Battery 0"
+    },
+    "Gauge!ed27n7": {
+      "path": "/diagnostics.status[:]{hardware_id==\"\"}{name==\"Freya battery status 1\"}.values[:]{key==\"voltage\"}.value",
+      "minValue": 21.5,
+      "maxValue": 25,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "foxglovePanelTitle": "Battery 1"
     },
     "Tab!3nhm9up": {
-      "activeTabIdx": 0,
+      "activeTabIdx": 2,
       "tabs": [
         {
           "title": "ROS Status",
           "layout": {
             "first": "Tab!2stsle7",
             "second": "Tab!3c5ayq6",
-            "direction": "row"
+            "direction": "row",
+            "splitPercentage": 76.4062837930831
           }
-        },
-        {
-          "title": "Topic Graph",
-          "layout": "TopicGraph!3gijpuo"
         },
         {
           "title": "Electrical",
           "layout": {
-            "first": {
-              "first": "Plot!1vtd7hh",
-              "second": "Plot!3cyssa",
+            "first": "Plot!1vtd7hh",
+            "second": {
+              "first": "Plot!3cyssa",
+              "second": "Plot!3qtaug1",
               "direction": "column"
             },
-            "second": "Gauge!2yoo6wn",
-            "direction": "row",
-            "splitPercentage": 50.36794766966476
+            "direction": "column"
           }
         },
         {
@@ -539,12 +631,12 @@
             },
             "second": "map!1pik150",
             "direction": "row",
-            "splitPercentage": 48.39142091152815
+            "splitPercentage": 53.084112149532714
           }
         },
         {
           "title": "3D",
-          "layout": "3D!1j5zwes"
+          "layout": "3D!183xwo9"
         }
       ]
     }
@@ -559,5 +651,19 @@
   "playbackConfig": {
     "speed": 1
   },
-  "layout": "Tab!3nhm9up"
+  "layout": {
+    "first": {
+      "first": "Plot!1sda7vn",
+      "second": {
+        "first": "Gauge!2yoo6wn",
+        "second": "Gauge!ed27n7",
+        "direction": "row"
+      },
+      "direction": "row",
+      "splitPercentage": 78.54685524420006
+    },
+    "second": "Tab!3nhm9up",
+    "direction": "column",
+    "splitPercentage": 13.577799801783943
+  }
 }
