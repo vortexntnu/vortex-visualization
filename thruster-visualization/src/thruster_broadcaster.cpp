@@ -65,9 +65,9 @@ void ThrusterVisualization::publish_markers() {
         marker.pose.orientation = tf2::toMsg(quat);
 
         double force_magnitude = std::abs(thruster_data_[i]);
-        marker.scale.x = std::abs(thruster_data_[i])*0.05;
-        marker.scale.y = 0.05;
-        marker.scale.z = 0.05;
+        marker.scale.x = std::abs(thruster_data_[i])*0.04;
+        marker.scale.y = 0.04;
+        marker.scale.z = 0.04;
 
         // Set color and other properties
         double color_intensity = std::min(force_magnitude / max_force, 1.0);
@@ -100,6 +100,11 @@ void ThrusterVisualization::publish_markers() {
     total_force_elevation_ = asin(total_force_z / sqrt(pow(total_force_x, 2) + pow(total_force_y, 2) + pow(total_force_z, 2)));
 
     // Visualize the total force
+    // if (total_force_magnitude_ < 0.0)
+    // {
+    //     total_force_azimuth_ += M_PI;
+    // }
+    
     visualization_msgs::msg::Marker total_force_marker = create_total_force_marker(total_force_magnitude_, total_force_azimuth_, total_force_elevation_);
     marker_array.markers.push_back(total_force_marker);
 
@@ -124,7 +129,7 @@ void ThrusterVisualization::publish_markers() {
     }
     int num_segments = 10;
     
-    visualization_msgs::msg::Marker arc = create_arc_marker("base_link", thruster_data_.size()+1, center, radius, start_angle, end_angle, num_segments);
+    visualization_msgs::msg::Marker arc = create_arc_marker("base_link", thruster_data_.size()+1, center, radius, start_angle, end_angle, num_segments, total_torque_z);
     marker_array.markers.push_back(arc);
 
     double angle_step = (end_angle - start_angle) / num_segments;
@@ -161,8 +166,8 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_total_force_marker
     total_force_marker.pose.orientation = tf2::toMsg(quat);
 
     total_force_marker.scale.x = magnitude * 0.05;
-    total_force_marker.scale.y = 0.05;
-    total_force_marker.scale.z = 0.05;
+    total_force_marker.scale.y = 0.04;
+    total_force_marker.scale.z = 0.04;
 
     total_force_marker.color.r = 1.0;
     total_force_marker.color.g = 0.0;
@@ -181,7 +186,7 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_arc_marker(
     double radius,
     double start_angle,
     double end_angle,
-    int num_segments)
+    int num_segments, double total_torque_z)
 {
     visualization_msgs::msg::Marker arc;
     arc.header.frame_id = frame_id;
@@ -190,8 +195,13 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_arc_marker(
     arc.id = id;
     arc.type = visualization_msgs::msg::Marker::LINE_STRIP;
     arc.action = visualization_msgs::msg::Marker::ADD;
-    
-    arc.scale.x = 0.05; // Line width
+
+    if (abs(total_torque_z) < 2.0) {
+        arc.scale.x = 0.0;
+    }
+    else {
+        arc.scale.x = 0.05;
+    }
     arc.color.r = 1.0;
     arc.color.g = 1.0;
     arc.color.b = 0.0;
@@ -232,7 +242,7 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_torque_direction_m
     torque_direction_arrow.type = visualization_msgs::msg::Marker::ARROW;
     torque_direction_arrow.action = visualization_msgs::msg::Marker::ADD;
 
-    if (abs(total_torque_z) < 1.0) {
+    if (abs(total_torque_z) < 2.0) {
         torque_direction_arrow.scale.x = 0.0;  // Length of the arrow
         torque_direction_arrow.scale.y = 0.0; // Width of the arrow head
         torque_direction_arrow.scale.z = 0.0; // Height of the arrow head

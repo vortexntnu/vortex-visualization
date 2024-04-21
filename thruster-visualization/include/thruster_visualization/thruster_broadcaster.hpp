@@ -68,7 +68,7 @@ class ThrusterVisualization : public rclcpp::Node {
             double radius,
             double start_angle,
             double end_angle,
-            int num_segments);
+            int num_segments, double total_torque_z);
 
         /**
          * @brief Creates a marker representing the direction of the torque.
