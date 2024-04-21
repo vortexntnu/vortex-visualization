@@ -43,11 +43,12 @@ class ThrusterVisualization : public rclcpp::Node {
 
         /**
          * @brief Creates a marker representing the total force of the thrusters.
-         * @param total_force_magnitude The magnitude of the total force.
-         * @param total_force_orientation The orientation of the total force.
+         * @param magnitude The magnitude of the total force.
+         * @param azimuth   The azimuth of the total force.
+         * @param elevation The elevation of the total force.
          * @return The created marker.
          */
-        visualization_msgs::msg::Marker create_total_force_marker(double total_force_magnitude, double total_force_orientation);
+        visualization_msgs::msg::Marker create_total_force_marker(double magnitude, double azimuth, double elevation);
 
         /**
          * @brief Creates a marker representing an arc.
@@ -95,7 +96,8 @@ class ThrusterVisualization : public rclcpp::Node {
         std::vector<double> thruster_data_;
         int num_thrusters_;
         double total_force_magnitude_;
-        double total_force_orientation_;
+        double total_force_azimuth_;
+        double total_force_elevation_;
 
 };
 

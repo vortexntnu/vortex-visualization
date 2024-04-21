@@ -23,16 +23,16 @@ ThrusterVisualization::ThrusterVisualization() : Node("thruster_visualization_no
 
     thruster_data_ = std::vector<double>(num_thrusters_, 0.0);
     total_force_magnitude_ = 0.0;
-    total_force_orientation_ = 0.0;
+    total_force_azimuth_ = 0.0;
+    total_force_elevation_ = 0.0;
 }
 
 void ThrusterVisualization::publish_markers() {
     visualization_msgs::msg::MarkerArray marker_array;
     double max_force = 100.0;
     double max_torque = 100.0;
-    double total_force_x = 0.0;
-    double total_force_y = 0.0;
-    double total_torque_z = 0.0;
+    double total_force_x = 0.0, total_force_y, total_force_z = 0.0;
+    double total_torque_x, total_torque_y, total_torque_z = 0.0;
 
     for (size_t i = 0; i < thruster_data_.size(); ++i)
     {
@@ -79,18 +79,28 @@ void ThrusterVisualization::publish_markers() {
         marker.lifetime = rclcpp::Duration::from_seconds(0);
         double force_x = (thruster_data_[i]) * cos(thruster_orientations_[i][2]);
         double force_y = (thruster_data_[i]) * sin(thruster_orientations_[i][2]);
+        double force_z = (thruster_data_[i]) * sin(thruster_orientations_[i][1]);
+
+        double torque_x = thruster_positions_[i][1] * force_z - thruster_positions_[i][2] * force_y;
+        double torque_y = thruster_positions_[i][2] * force_x - thruster_positions_[i][0] * force_z;
         double torque_z = thruster_positions_[i][0] * force_y - thruster_positions_[i][1] * force_x;
+
         total_force_x += force_x;
         total_force_y += force_y;
+        total_force_z += force_z;
+
+        total_torque_x += torque_x;
+        total_torque_y += torque_y;
         total_torque_z += torque_z;
 
         marker_array.markers.push_back(marker);
     }
-    total_force_magnitude_ = sqrt(pow(total_force_x, 2) + pow(total_force_y, 2));
-    total_force_orientation_ = atan2(total_force_y, total_force_x);
+    total_force_magnitude_ = sqrt(pow(total_force_x, 2) + pow(total_force_y, 2) + pow(total_force_z, 2));
+    total_force_azimuth_ = atan2(total_force_y, total_force_x);
+    total_force_elevation_ = asin(total_force_z / sqrt(pow(total_force_x, 2) + pow(total_force_y, 2) + pow(total_force_z, 2)));
 
     // Visualize the total force
-    visualization_msgs::msg::Marker total_force_marker = create_total_force_marker(total_force_magnitude_, total_force_orientation_);
+    visualization_msgs::msg::Marker total_force_marker = create_total_force_marker(total_force_magnitude_, total_force_azimuth_, total_force_elevation_);
     marker_array.markers.push_back(total_force_marker);
 
     // Visualize the total torque
@@ -133,7 +143,7 @@ void ThrusterVisualization::thruster_forces_callback(const std_msgs::msg::Float3
     }
 }
 
-visualization_msgs::msg::Marker ThrusterVisualization::create_total_force_marker(double total_force_magnitude, double total_force_orientation) {
+visualization_msgs::msg::Marker ThrusterVisualization::create_total_force_marker(double magnitude, double azimuth, double elevation) {
     visualization_msgs::msg::Marker total_force_marker;
     total_force_marker.header.frame_id = "base_link";
     total_force_marker.header.stamp = this->get_clock()->now();
@@ -147,10 +157,10 @@ visualization_msgs::msg::Marker ThrusterVisualization::create_total_force_marker
     total_force_marker.pose.position.z = 0.0;
 
     tf2::Quaternion quat;
-    quat.setRPY(0, 0, total_force_orientation);
+    quat.setRPY(0, elevation, azimuth);
     total_force_marker.pose.orientation = tf2::toMsg(quat);
 
-    total_force_marker.scale.x = total_force_magnitude * 0.05;
+    total_force_marker.scale.x = magnitude * 0.05;
     total_force_marker.scale.y = 0.05;
     total_force_marker.scale.z = 0.05;
 
