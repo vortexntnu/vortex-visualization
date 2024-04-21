@@ -50,10 +50,6 @@ TargetTrackingVisualizationNode::TargetTrackingVisualizationNode(const rclcpp::N
 }
 
 void TargetTrackingVisualizationNode::topic_callback(const vortex_msgs::msg::LandmarkArray landmark_array) {
-    double gate_threshold = get_parameter("gate_threshold").as_double();
-    double gate_min_threshold = get_parameter("gate_min_threshold").as_double();
-    double gate_max_threshold = get_parameter("gate_max_threshold").as_double();
-
     // Create a scene entity message
     foxglove_msgs::msg::SceneEntity scene_entity;
     scene_entity.timestamp = this->now(); // Set timestamp
@@ -107,15 +103,15 @@ void TargetTrackingVisualizationNode::topic_callback(const vortex_msgs::msg::Lan
 
             vortex::prob::Gauss2d gauss(position, position_covariance);
 
-            vortex::plotting::Ellipse ellipse = gauss_to_ellipse(gauss, gate_threshold); // Fix gate threshold param
+            vortex::plotting::Ellipse ellipse = gauss_to_ellipse(gauss, gate_threshold_); // Fix gate threshold param
 
             double a = ellipse.a;
-            a = (a < gate_min_threshold) ? gate_min_threshold : a;
-            a = (a > gate_max_threshold) ? gate_max_threshold : a;
+            a = (a < gate_min_threshold_) ? gate_min_threshold_ : a;
+            a = (a > gate_max_threshold_) ? gate_max_threshold_ : a;
 
             double b = ellipse.b;
-            b = (b < gate_min_threshold) ? gate_min_threshold : b;
-            b = (b > gate_max_threshold) ? gate_max_threshold : b;
+            b = (b < gate_min_threshold_) ? gate_min_threshold_ : b;
+            b = (b > gate_max_threshold_) ? gate_max_threshold_ : b;
 
             // Create a cylinder primitive
             cylinder.pose.position.x = landmark.odom.pose.pose.position.x;
