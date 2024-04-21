@@ -48,20 +48,20 @@ void ThrusterVisualization::publish_markers() {
         marker.pose.position.x = thruster_positions_[i][0];
         marker.pose.position.y = thruster_positions_[i][1];
         marker.pose.position.z = thruster_positions_[i][2];
-        
-        float thruster_angle = 0.0;
-        for (float angle : thruster_orientations_[i]) {
-            if (angle != 0.0) {
-                thruster_angle = angle;
-            }
-        }
-        
+
+        std::vector<double> angles = {thruster_orientations_[i][0], thruster_orientations_[i][1], thruster_orientations_[i][2]};
+        std::vector<double> adjusted_angles = angles;
+
         if (thruster_data_[i] < 0) {
-            thruster_angle += M_PI;
+            for (size_t i = 0; i < angles.size(); ++i) {
+                if (abs(angles[i]) != 0.0) {
+                    adjusted_angles[i] += M_PI;
+                }
+            }
         }
 
         tf2::Quaternion quat;
-        quat.setRPY(0, 0, thruster_angle);
+        quat.setRPY(adjusted_angles[0], adjusted_angles[1], adjusted_angles[2]);
         marker.pose.orientation = tf2::toMsg(quat);
 
         double force_magnitude = std::abs(thruster_data_[i]);
