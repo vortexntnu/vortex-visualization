@@ -68,7 +68,8 @@ class ThrusterVisualization : public rclcpp::Node {
             double radius,
             double start_angle,
             double end_angle,
-            int num_segments);
+            int num_segments,
+            const geometry_msgs::msg::Quaternion& orientation);
 
         /**
          * @brief Creates a marker representing the direction of the torque.
@@ -86,7 +87,10 @@ class ThrusterVisualization : public rclcpp::Node {
             const geometry_msgs::msg::Point& center,
             double radius,
             double final_angle,
-            double total_torque_z);
+            double total_torque,
+            const geometry_msgs::msg::Quaternion& orientation);
+
+        std::vector<visualization_msgs::msg::Marker> create_torque_arc_markers(const std::string& axis, double total_torque, int marker_id, geometry_msgs::msg::Point center);
 
         rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr thruster_marker_publisher_;
         rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr thruster_forces_subscriber_;
