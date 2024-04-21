@@ -91,7 +91,7 @@ class ThrusterVisualization : public rclcpp::Node {
         rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr thruster_forces_subscriber_;
         rclcpp::TimerBase::SharedPtr timer_;
         std::vector<std::vector<double>> thruster_positions_;
-        std::vector<double> thruster_orientations_;
+        std::vector<std::vector<double>> thruster_orientations_;
         std::vector<double> thruster_data_;
         int num_thrusters_;
         double total_force_magnitude_;

@@ -11,11 +11,11 @@ ThrusterVisualization::ThrusterVisualization() : Node("thruster_visualization_no
     this->get_parameter("num_thrusters", num_thrusters_);
 
     thruster_positions_ = std::vector<std::vector<double>>(num_thrusters_, std::vector<double>(3, 0.0));
-    thruster_orientations_ = std::vector<double>(num_thrusters_, 0.0);
+    thruster_orientations_ = std::vector<std::vector<double>>(num_thrusters_, std::vector<double>(3, 0.0));
 
     for (int i = 0; i < num_thrusters_; ++i) {
         this->declare_parameter<std::vector<double>>("thruster" + std::to_string(i) + "_position");
-        this->declare_parameter<double>("thruster" + std::to_string(i) + "_orientation");
+        this->declare_parameter<std::vector<double>>("thruster" + std::to_string(i) + "_orientation");
         
         this->get_parameter("thruster" + std::to_string(i) + "_position", thruster_positions_[i]);
         this->get_parameter("thruster" + std::to_string(i) + "_orientation", thruster_orientations_[i]);
@@ -49,7 +49,12 @@ void ThrusterVisualization::publish_markers() {
         marker.pose.position.y = thruster_positions_[i][1];
         marker.pose.position.z = thruster_positions_[i][2];
         
-        float thruster_angle = thruster_orientations_[i];
+        float thruster_angle = 0.0;
+        for (float angle : thruster_orientations_[i]) {
+            if (angle != 0.0) {
+                thruster_angle = angle;
+            }
+        }
         
         if (thruster_data_[i] < 0) {
             thruster_angle += M_PI;
@@ -72,8 +77,8 @@ void ThrusterVisualization::publish_markers() {
         marker.color.a = 1.0;
 
         marker.lifetime = rclcpp::Duration::from_seconds(0);
-        double force_x = (thruster_data_[i]) * cos(thruster_orientations_[i]);
-        double force_y = (thruster_data_[i]) * sin(thruster_orientations_[i]);
+        double force_x = (thruster_data_[i]) * cos(thruster_orientations_[i][2]);
+        double force_y = (thruster_data_[i]) * sin(thruster_orientations_[i][2]);
         double torque_z = thruster_positions_[i][0] * force_y - thruster_positions_[i][1] * force_x;
         total_force_x += force_x;
         total_force_y += force_y;
