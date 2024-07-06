@@ -1,0 +1,265 @@
+{
+  "configById": {
+    "Gauge!39ocfkz": {
+      "path": "/asv/power_sense_module/voltage.data",
+      "minValue": 21.5,
+      "maxValue": 25.2,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "foxglovePanelTitle": "PSM Voltage"
+    },
+    "Gauge!2b40t8k": {
+      "path": "/asv/power_sense_module/current.data",
+      "minValue": 0,
+      "maxValue": 200,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": true,
+      "foxglovePanelTitle": "PSM Current"
+    },
+    "RawMessages!48miyxh": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/asv/power_sense_module/voltage.data",
+      "fontSize": 16
+    },
+    "RawMessages!2t8is0h": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/asv/power_sense_module/current.data",
+      "fontSize": 16
+    },
+    "RawMessages!jnhczt": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/internal/status/bms0.voltage",
+      "fontSize": 12
+    },
+    "RawMessages!3e6dlu7": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/internal/status/bms0.current",
+      "fontSize": 12
+    },
+    "RawMessages!4fjyea3": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/internal/status/bms0.percentage",
+      "fontSize": 12
+    },
+    "RawMessages!20fxxjb": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/internal/status/bms1.voltage",
+      "fontSize": 12
+    },
+    "RawMessages!1rhn35f": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/internal/status/bms1.current",
+      "fontSize": 12
+    },
+    "RawMessages!4f87bgd": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/internal/status/bms1.percentage",
+      "fontSize": 12
+    },
+    "Plot!352oe24": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/power_sense_module/voltage.data",
+          "enabled": true,
+          "color": "#4e98e2",
+          "lineSize": 2,
+          "label": "PSM Voltage"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/internal/status/bms0.voltage",
+          "enabled": true,
+          "color": "#f5774d",
+          "label": "BMS 0 Voltage"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/internal/status/bms1.voltage",
+          "enabled": true,
+          "color": "#f7df71",
+          "label": "BMS 1 Voltage"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Voltages over time",
+      "minXValue": 0,
+      "minYValue": 21.5,
+      "maxYValue": 25.2
+    },
+    "Plot!3yhvab4": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ESC1.data",
+          "enabled": true,
+          "color": "#4e98e2",
+          "label": "ESC Temperature 1"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ESC2.data",
+          "enabled": true,
+          "color": "#f5774d",
+          "label": "ESC Temperature 2"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ESC3.data",
+          "enabled": true,
+          "color": "#f7df71",
+          "label": "ESC Temperature 3"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ESC4.data",
+          "enabled": true,
+          "color": "#5cd6a9",
+          "label": "ESC Temperature 4"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 300,
+      "foxglovePanelTitle": "ESC Temperatures over time"
+    },
+    "Plot!3kgl5d1": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ambient1.data",
+          "enabled": true,
+          "color": "#4e98e2",
+          "label": "Ambient Temperature 1"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/asv/temperature/ambient2.data",
+          "enabled": true,
+          "color": "#f5774d",
+          "label": "Ambient Temperature 2"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 300,
+      "foxglovePanelTitle": "Ambient Temperatures over time"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "direction": "row",
+      "first": {
+        "first": {
+          "first": "Gauge!39ocfkz",
+          "second": "Gauge!2b40t8k",
+          "direction": "row",
+          "splitPercentage": 49.938737220967205
+        },
+        "second": {
+          "first": "RawMessages!48miyxh",
+          "second": "RawMessages!2t8is0h",
+          "direction": "row",
+          "splitPercentage": 50.2043688019298
+        },
+        "direction": "column",
+        "splitPercentage": 74.72745292368683
+      },
+      "second": {
+        "first": {
+          "first": "RawMessages!jnhczt",
+          "second": {
+            "first": "RawMessages!3e6dlu7",
+            "second": {
+              "first": "RawMessages!4fjyea3",
+              "second": {
+                "first": "RawMessages!20fxxjb",
+                "second": {
+                  "first": "RawMessages!1rhn35f",
+                  "second": "RawMessages!4f87bgd",
+                  "direction": "column"
+                },
+                "direction": "column",
+                "splitPercentage": 32
+              },
+              "direction": "column",
+              "splitPercentage": 24.023154848046318
+            },
+            "direction": "column",
+            "splitPercentage": 18.991793669402114
+          },
+          "direction": "column",
+          "splitPercentage": 15.460852329038651
+        },
+        "second": "Plot!352oe24",
+        "direction": "row",
+        "splitPercentage": 31.798806479113377
+      },
+      "splitPercentage": 26.641651031894938
+    },
+    "second": {
+      "first": "Plot!3yhvab4",
+      "second": "Plot!3kgl5d1",
+      "direction": "row"
+    },
+    "direction": "column"
+  }
+}
