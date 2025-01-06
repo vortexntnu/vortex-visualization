@@ -6,28 +6,28 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import rclpy
+from geometry_msgs.msg import Point, Pose
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from nav_msgs.msg import Odometry
 from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QDoubleValidator
 from PyQt6.QtWidgets import (
     QApplication,
     QGridLayout,
-    QLabel,
-    QMainWindow,
-    QTabWidget,
-    QVBoxLayout,
     QHBoxLayout,
-    QWidget,
-    QPushButton,
+    QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QLineEdit
+    QMainWindow,
+    QPushButton,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtGui import QDoubleValidator
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Float32
-from geometry_msgs.msg import Point, Pose
 
 # --- Quaternion to Euler angles ---
 
@@ -43,6 +43,7 @@ def quaternion_to_euler(x: float, y: float, z: float, w: float) -> list[float]:
 
     Returns:
         List[float]: A list of Euler angles [roll, pitch, yaw].
+
     """
     # Roll (x-axis rotation)
     sinr_cosp = 2 * (w * x + y * z)
@@ -134,33 +135,29 @@ class GuiNode(Node):
 
         # --- Waypoint stuff ---
         # Create a publisher for the custom Waypoints message
-        self.publisher_ = self.create_publisher(Pose, 'waypoints', 10)
-
+        self.publisher_ = self.create_publisher(Pose, "waypoints", 10)
 
         # Inputs for X, Y, Z
         self.x_input = QLineEdit()
-        self.x_input.setPlaceholderText('X')
+        self.x_input.setPlaceholderText("X")
         self.x_input.setValidator(QDoubleValidator())
         self.y_input = QLineEdit()
-        self.y_input.setPlaceholderText('Y')
+        self.y_input.setPlaceholderText("Y")
         self.y_input.setValidator(QDoubleValidator())
         self.z_input = QLineEdit()
-        self.z_input.setPlaceholderText('Z')
+        self.z_input.setPlaceholderText("Z")
         self.z_input.setValidator(QDoubleValidator())
 
-
         # Buttons
-        self.add_button = QPushButton('Add Waypoint')
+        self.add_button = QPushButton("Add Waypoint")
         self.add_button.clicked.connect(self.add_waypoint)
 
-        self.send_button = QPushButton('Send Mission')
+        self.send_button = QPushButton("Send Mission")
         self.send_button.clicked.connect(self.send_mission)
         self.send_button.setEnabled(False)  # Disabled by default
 
-        self.clear_button = QPushButton('Clear Waypoints')
+        self.clear_button = QPushButton("Clear Waypoints")
         self.clear_button.clicked.connect(self.clear_waypoints)
-
-
 
     def add_waypoint(self):
         """Add a waypoint to the list widget."""
@@ -188,10 +185,10 @@ class GuiNode(Node):
         for i in range(self.waypoint_list.count()):
             text = self.waypoint_list.item(i).text()
             # Simple parse: "X: xval, Y: yval, Z: zval"
-            parts = text.replace(" ", "").split(',')
-            x_val = float(parts[0].split(':')[1])
-            y_val = float(parts[1].split(':')[1])
-            z_val = float(parts[2].split(':')[1])
+            parts = text.replace(" ", "").split(",")
+            x_val = float(parts[0].split(":")[1])
+            y_val = float(parts[1].split(":")[1])
+            z_val = float(parts[2].split(":")[1])
 
             pt = Point()
             pt.x = x_val
@@ -212,7 +209,6 @@ class GuiNode(Node):
         """Clear the waypoint list."""
         self.waypoint_list.clear()
         self.send_button.setEnabled(False)
-
 
     # --- Callback functions ---
 
@@ -270,10 +266,10 @@ class PlotCanvas(FigureCanvas):
         # Set up the 3D plot
         self.gui_node = gui_node
         self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.ax = self.fig.add_subplot(111, projection="3d")
 
         # Initialize a red dot for the current position
-        (self.current_position_dot,) = self.ax.plot([], [], [], 'ro')
+        (self.current_position_dot,) = self.ax.plot([], [], [], "ro")
 
         super().__init__(self.fig)
         self.setParent(parent)
@@ -288,7 +284,7 @@ class PlotCanvas(FigureCanvas):
         self.x_data: list[float] = []
         self.y_data: list[float] = []
         self.z_data: list[float] = []
-        (self.line,) = self.ax.plot([], [], [], 'b-')
+        (self.line,) = self.ax.plot([], [], [], "b-")
 
     def update_plot(
         self, x_data: list[float], y_data: list[float], z_data: list[float]
@@ -384,31 +380,31 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # Inputs for X, Y, Z
     ros_node.x_input = QLineEdit()
-    ros_node.x_input.setPlaceholderText('X')
+    ros_node.x_input.setPlaceholderText("X")
     ros_node.x_input.setValidator(QDoubleValidator())
 
     ros_node.y_input = QLineEdit()
-    ros_node.y_input.setPlaceholderText('Y')
+    ros_node.y_input.setPlaceholderText("Y")
     ros_node.y_input.setValidator(QDoubleValidator())
 
     ros_node.z_input = QLineEdit()
-    ros_node.z_input.setPlaceholderText('Z')
+    ros_node.z_input.setPlaceholderText("Z")
     ros_node.z_input.setValidator(QDoubleValidator())
 
-    inputs_layout.addWidget(QLabel('Waypoint:'))
+    inputs_layout.addWidget(QLabel("Waypoint:"))
     inputs_layout.addWidget(ros_node.x_input)
     inputs_layout.addWidget(ros_node.y_input)
     inputs_layout.addWidget(ros_node.z_input)
 
     # Buttons for mission interface
-    ros_node.add_button = QPushButton('Add Waypoint')
+    ros_node.add_button = QPushButton("Add Waypoint")
     ros_node.add_button.clicked.connect(ros_node.add_waypoint)
 
-    ros_node.send_button = QPushButton('Send Mission')
+    ros_node.send_button = QPushButton("Send Mission")
     ros_node.send_button.clicked.connect(ros_node.send_mission)
     ros_node.send_button.setEnabled(False)  # Disabled by default
 
-    ros_node.clear_button = QPushButton('Clear Waypoints')
+    ros_node.clear_button = QPushButton("Clear Waypoints")
     ros_node.clear_button.clicked.connect(ros_node.clear_waypoints)
 
     buttons_layout.addWidget(ros_node.add_button)
@@ -456,6 +452,5 @@ def main(args: Optional[list[str]] = None) -> None:
     sys.exit()
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
