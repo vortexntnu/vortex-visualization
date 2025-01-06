@@ -16,11 +16,18 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QTabWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QWidget,
+    QPushButton,
+    QListWidget,
+    QListWidgetItem,
+    QLineEdit
 )
+from PyQt6.QtGui import QDoubleValidator
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Float32
+from geometry_msgs.msg import Point, Pose
 
 # --- Quaternion to Euler angles ---
 
@@ -124,6 +131,88 @@ class GuiNode(Node):
         self.voltage = 0.0
         self.temperature = 0.0
         self.pressure = 0.0
+
+        # --- Waypoint stuff ---
+        # Create a publisher for the custom Waypoints message
+        self.publisher_ = self.create_publisher(Pose, 'waypoints', 10)
+
+
+        # Inputs for X, Y, Z
+        self.x_input = QLineEdit()
+        self.x_input.setPlaceholderText('X')
+        self.x_input.setValidator(QDoubleValidator())
+        self.y_input = QLineEdit()
+        self.y_input.setPlaceholderText('Y')
+        self.y_input.setValidator(QDoubleValidator())
+        self.z_input = QLineEdit()
+        self.z_input.setPlaceholderText('Z')
+        self.z_input.setValidator(QDoubleValidator())
+
+
+        # Buttons
+        self.add_button = QPushButton('Add Waypoint')
+        self.add_button.clicked.connect(self.add_waypoint)
+
+        self.send_button = QPushButton('Send Mission')
+        self.send_button.clicked.connect(self.send_mission)
+        self.send_button.setEnabled(False)  # Disabled by default
+
+        self.clear_button = QPushButton('Clear Waypoints')
+        self.clear_button.clicked.connect(self.clear_waypoints)
+
+
+
+    def add_waypoint(self):
+        """Add a waypoint to the list widget."""
+        x = self.x_input.text().strip()
+        y = self.y_input.text().strip()
+        z = self.z_input.text().strip()
+
+        if x and y and z:
+            list_entry = f"X: {x}, Y: {y}, Z: {z}"
+            self.waypoint_list.addItem(QListWidgetItem(list_entry))
+
+            # Clear inputs
+            self.x_input.clear()
+            self.y_input.clear()
+            self.z_input.clear()
+
+            # Enable the send button if there's at least one waypoint
+            self.send_button.setEnabled(True)
+
+    def send_mission(self):
+        """Publish an entire list of waypoints as a single Waypoints message."""
+        waypoints_msg = Pose()
+        waypoints_list = []
+
+        for i in range(self.waypoint_list.count()):
+            text = self.waypoint_list.item(i).text()
+            # Simple parse: "X: xval, Y: yval, Z: zval"
+            parts = text.replace(" ", "").split(',')
+            x_val = float(parts[0].split(':')[1])
+            y_val = float(parts[1].split(':')[1])
+            z_val = float(parts[2].split(':')[1])
+
+            pt = Point()
+            pt.x = x_val
+            pt.y = y_val
+            pt.z = z_val
+            waypoints_list.append(pt)
+
+        waypoints_msg.points = waypoints_list
+
+        self.publisher_.publish(waypoints_msg)
+        self.get_logger().info("Mission waypoints have been published.")
+
+        # Clear the list after sending
+        self.waypoint_list.clear()
+        self.send_button.setEnabled(False)  # Disable until a new waypoint is added
+
+    def clear_waypoints(self):
+        """Clear the waypoint list."""
+        self.waypoint_list.clear()
+        self.send_button.setEnabled(False)
+
 
     # --- Callback functions ---
 
@@ -240,6 +329,10 @@ def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
 
 def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
+    # Initialize QApplication before creating any widgets
+    app = QApplication(sys.argv)
+
+    # Initialize ROS2 after QApplication
     rclpy.init(args=args)
     ros_node = GuiNode()
     executor = MultiThreadedExecutor()
@@ -249,7 +342,6 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_thread.start()
 
     # Setup the PyQt5 application and window
-    app = QApplication(sys.argv)
     gui = QMainWindow()
     gui.setWindowTitle("Vortex GUI")
     gui.setGeometry(100, 100, 600, 400)
@@ -282,6 +374,57 @@ def main(args: Optional[list[str]] = None) -> None:
     gui.setCentralWidget(tabs)
     gui.showMaximized()
 
+    # --- Mission Interface Tab ---
+    mission_widget = QWidget()
+    mission_layout = QVBoxLayout(mission_widget)
+
+    # Layouts for mission interface
+    inputs_layout = QHBoxLayout()
+    buttons_layout = QHBoxLayout()
+
+    # Inputs for X, Y, Z
+    ros_node.x_input = QLineEdit()
+    ros_node.x_input.setPlaceholderText('X')
+    ros_node.x_input.setValidator(QDoubleValidator())
+
+    ros_node.y_input = QLineEdit()
+    ros_node.y_input.setPlaceholderText('Y')
+    ros_node.y_input.setValidator(QDoubleValidator())
+
+    ros_node.z_input = QLineEdit()
+    ros_node.z_input.setPlaceholderText('Z')
+    ros_node.z_input.setValidator(QDoubleValidator())
+
+    inputs_layout.addWidget(QLabel('Waypoint:'))
+    inputs_layout.addWidget(ros_node.x_input)
+    inputs_layout.addWidget(ros_node.y_input)
+    inputs_layout.addWidget(ros_node.z_input)
+
+    # Buttons for mission interface
+    ros_node.add_button = QPushButton('Add Waypoint')
+    ros_node.add_button.clicked.connect(ros_node.add_waypoint)
+
+    ros_node.send_button = QPushButton('Send Mission')
+    ros_node.send_button.clicked.connect(ros_node.send_mission)
+    ros_node.send_button.setEnabled(False)  # Disabled by default
+
+    ros_node.clear_button = QPushButton('Clear Waypoints')
+    ros_node.clear_button.clicked.connect(ros_node.clear_waypoints)
+
+    buttons_layout.addWidget(ros_node.add_button)
+    buttons_layout.addWidget(ros_node.send_button)
+    buttons_layout.addWidget(ros_node.clear_button)
+
+    # List widget to display waypoints
+    ros_node.waypoint_list = QListWidget()
+
+    # Add layouts to the main layout
+    mission_layout.addLayout(inputs_layout)
+    mission_layout.addLayout(buttons_layout)
+    mission_layout.addWidget(ros_node.waypoint_list)
+
+    tabs.addTab(mission_widget, "Mission")
+
     # Use a QTimer to update plot, current position, and internal status in the main thread
     def update_gui() -> None:
         plot_canvas.update_plot(
@@ -311,6 +454,7 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.destroy_node()
     rclpy.shutdown()
     sys.exit()
+
 
 
 if __name__ == '__main__':
