@@ -28,6 +28,10 @@ from PyQt6.QtWidgets import (
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Float32
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from geometry_msgs.msg import PoseStamped
+from vortex_msgs.action import ReferenceFilterWaypoint
 
 # --- Quaternion to Euler angles ---
 
@@ -61,6 +65,35 @@ def quaternion_to_euler(x: float, y: float, z: float, w: float) -> list[float]:
 
     return [roll, pitch, yaw]
 
+def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> list[float]:
+    """Convert Euler angles to a quaternion.
+
+    Args:
+        roll (float): The roll angle in degrees.
+        pitch (float): The pitch angle in degrees.
+        yaw (float): The yaw angle in degrees.
+
+    Returns:
+        List[float]: A list of quaternion components [x, y, z, w].
+
+    """
+    roll = np.radians(roll)
+    pitch = np.radians(pitch)
+    yaw = np.radians(yaw)
+
+    cy = math.cos(yaw * 0.5)
+    sy = math.sin(yaw * 0.5)
+    cp = math.cos(pitch * 0.5)
+    sp = math.sin(pitch * 0.5)
+    cr = math.cos(roll * 0.5)
+    sr = math.sin(roll * 0.5)
+
+    w = cy * cp * cr + sy * sp * sr
+    x = cy * cp * sr - sy * sp * cr
+    y = sy * cp * sr + cy * sp * cr
+    z = sy * cp * cr - cy * sp * sr
+
+    return [x, y, z, w]
 
 # --- GUI Node ---
 
@@ -71,6 +104,8 @@ class GuiNode(Node):
     def __init__(self) -> None:
         """Initialize the GuiNode and set up the odometry subscriber."""
         super().__init__("auv_gui_node")
+
+        self._action_client = ActionClient(self, ReferenceFilterWaypoint, 'reference_filter')
 
         # ROS2 parameters
         self.declare_parameter("odom_topic", "/nucleus/odom")
@@ -153,7 +188,7 @@ class GuiNode(Node):
         self.add_button.clicked.connect(self.add_waypoint)
 
         self.send_button = QPushButton("Send Mission")
-        self.send_button.clicked.connect(self.send_mission)
+        self.send_button.clicked.connect(self.send_goal)
         self.send_button.setEnabled(False)  # Disabled by default
 
         self.clear_button = QPushButton("Clear Waypoints")
@@ -177,40 +212,93 @@ class GuiNode(Node):
             # Enable the send button if there's at least one waypoint
             self.send_button.setEnabled(True)
 
-    def send_mission(self):
-        """Publish an entire list of waypoints as a single Waypoints message."""
-        waypoints_msg = Pose()
-        waypoints_list = []
+    # def send_mission(self):
+    #     """Publish an entire list of waypoints as a single Waypoints message."""
+    #     waypoints_msg = Pose()
+    #     waypoints_list = []
 
-        for i in range(self.waypoint_list.count()):
-            text = self.waypoint_list.item(i).text()
-            # Simple parse: "X: xval, Y: yval, Z: zval"
-            parts = text.replace(" ", "").split(",")
-            x_val = float(parts[0].split(":")[1])
-            y_val = float(parts[1].split(":")[1])
-            z_val = float(parts[2].split(":")[1])
+    #     for i in range(self.waypoint_list.count()):
+    #         text = self.waypoint_list.item(i).text()
+    #         # Simple parse: "X: xval, Y: yval, Z: zval"
+    #         parts = text.replace(" ", "").split(",")
+    #         x_val = float(parts[0].split(":")[1])
+    #         y_val = float(parts[1].split(":")[1])
+    #         z_val = float(parts[2].split(":")[1])
 
-            pt = Point()
-            pt.x = x_val
-            pt.y = y_val
-            pt.z = z_val
-            waypoints_list.append(pt)
+    #         pt = Point()
+    #         pt.x = x_val
+    #         pt.y = y_val
+    #         pt.z = z_val
+    #         waypoints_list.append(pt)
 
-        waypoints_msg.points = waypoints_list
+    #     waypoints_msg.points = waypoints_list
 
-        self.publisher_.publish(waypoints_msg)
-        self.get_logger().info("Mission waypoints have been published.")
+    #     self.publisher_.publish(waypoints_msg)
+    #     self.get_logger().info("Mission waypoints have been published.")
 
-        # Clear the list after sending
-        self.waypoint_list.clear()
-        self.send_button.setEnabled(False)  # Disable until a new waypoint is added
+    #     # Clear the list after sending
+    #     self.waypoint_list.clear()
+    #     self.send_button.setEnabled(False)  # Disable until a new waypoint is added
 
     def clear_waypoints(self):
         """Clear the waypoint list."""
         self.waypoint_list.clear()
         self.send_button.setEnabled(False)
 
+    def send_goal(self):
+        # Create the goal message
+        goal_msg = ReferenceFilterWaypoint.Goal()
+
+        # Create a PoseStamped message for the goal
+        pose_stamped = PoseStamped()
+
+        text = self.waypoint_list.selectedItems()[0].text()
+        parts = text.replace(" ", "").split(",")
+        x_val = float(parts[0].split(":")[1])
+        y_val = float(parts[1].split(":")[1])
+        z_val = float(parts[2].split(":")[1])
+
+        # Set the PoseStamped position
+        pose_stamped.pose.position.x = x_val
+        pose_stamped.pose.position.y = y_val
+        pose_stamped.pose.position.z = z_val
+
+        # Set orientation (identity quaternion if not specified)
+        pose_stamped.pose.orientation.x = 0.0
+        pose_stamped.pose.orientation.y = 0.0
+        pose_stamped.pose.orientation.z = 0.0
+        pose_stamped.pose.orientation.w = 1.0
+
+        goal_msg.goal = pose_stamped
+
+        # Send the goal asynchronously
+        self._action_client.wait_for_server()
+        self.get_logger().info('Sending goal...')
+        self._send_goal_future = self._action_client.send_goal_async(
+            goal_msg, feedback_callback=self.feedback_callback
+        )
+        self._send_goal_future.add_done_callback(self.goal_response_callback)
+
+
+
     # --- Callback functions ---
+    def goal_response_callback(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().info('Goal rejected :(')
+            return
+
+        self.get_logger().info('Goal accepted :)')
+        self._get_result_future = goal_handle.get_result_async()
+        self._get_result_future.add_done_callback(self.get_result_callback)
+
+    def feedback_callback(self, feedback_msg):
+            feedback = feedback_msg.feedback.feedback
+            # self.get_logger().info(f'Received feedback: x={feedback.x}, y={feedback.y}, z={feedback.z}')
+
+    def get_result_callback(self, future):
+        result = future.result().result.result
+        self.get_logger().info(f'Goal result: x={result.x}, y={result.y}, z={result.z}')
 
     def odom_callback(self, msg: Odometry) -> None:
         """Callback function that is triggered when an odometry message is received."""
@@ -322,6 +410,8 @@ def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
     """Run the ROS2 node in a separate thread using a MultiThreadedExecutor."""
     rclpy.spin(ros_node, executor)
 
+        
+
 
 def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
@@ -332,7 +422,7 @@ def main(args: Optional[list[str]] = None) -> None:
     rclpy.init(args=args)
     ros_node = GuiNode()
     executor = MultiThreadedExecutor()
-
+    
     # Run ROS in a separate thread
     ros_thread = Thread(target=run_ros_node, args=(ros_node, executor), daemon=True)
     ros_thread.start()
@@ -401,7 +491,7 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.add_button.clicked.connect(ros_node.add_waypoint)
 
     ros_node.send_button = QPushButton("Send Mission")
-    ros_node.send_button.clicked.connect(ros_node.send_mission)
+    ros_node.send_button.clicked.connect(ros_node.send_goal)
     ros_node.send_button.setEnabled(False)  # Disabled by default
 
     ros_node.clear_button = QPushButton("Clear Waypoints")
