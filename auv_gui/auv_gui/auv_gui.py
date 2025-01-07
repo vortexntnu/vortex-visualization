@@ -237,33 +237,6 @@ class GuiNode(Node):
         # Enable the send button if there's at least one waypoint
         self.send_button.setEnabled(True)
 
-    # def send_mission(self):
-    #     """Publish an entire list of waypoints as a single Waypoints message."""
-    #     waypoints_msg = Pose()
-    #     waypoints_list = []
-
-    #     for i in range(self.waypoint_list.count()):
-    #         text = self.waypoint_list.item(i).text()
-    #         # Simple parse: "X: xval, Y: yval, Z: zval"
-    #         parts = text.replace(" ", "").split(",")
-    #         x_val = float(parts[0].split(":")[1])
-    #         y_val = float(parts[1].split(":")[1])
-    #         z_val = float(parts[2].split(":")[1])
-
-    #         pt = Point()
-    #         pt.x = x_val
-    #         pt.y = y_val
-    #         pt.z = z_val
-    #         waypoints_list.append(pt)
-
-    #     waypoints_msg.points = waypoints_list
-
-    #     self.publisher_.publish(waypoints_msg)
-    #     self.get_logger().info("Mission waypoints have been published.")
-
-    #     # Clear the list after sending
-    #     self.waypoint_list.clear()
-    #     self.send_button.setEnabled(False)  # Disable until a new waypoint is added
 
     def clear_waypoints(self):
         """Clear the waypoint list."""
