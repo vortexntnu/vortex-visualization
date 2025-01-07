@@ -6,7 +6,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import rclpy
-from geometry_msgs.msg import Point, Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from nav_msgs.msg import Odometry
 from PyQt6.QtCore import QTimer
@@ -25,12 +25,10 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Float32
-from rclpy.node import Node
-from rclpy.action import ActionClient
-from geometry_msgs.msg import PoseStamped
 from vortex_msgs.action import ReferenceFilterWaypoint
 
 # --- Quaternion to Euler angles ---
@@ -65,6 +63,7 @@ def quaternion_to_euler(x: float, y: float, z: float, w: float) -> list[float]:
 
     return [roll, pitch, yaw]
 
+
 def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> list[float]:
     """Convert Euler angles to a quaternion.
 
@@ -95,6 +94,7 @@ def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> list[float]:
 
     return [x, y, z, w]
 
+
 # --- GUI Node ---
 
 
@@ -105,7 +105,9 @@ class GuiNode(Node):
         """Initialize the GuiNode and set up the odometry subscriber."""
         super().__init__("auv_gui_node")
 
-        self._action_client = ActionClient(self, ReferenceFilterWaypoint, 'reference_filter')
+        self._action_client = ActionClient(
+            self, ReferenceFilterWaypoint, "reference_filter"
+        )
 
         # ROS2 parameters
         self.declare_parameter("odom_topic", "/nucleus/odom")
@@ -284,7 +286,6 @@ class GuiNode(Node):
         pitch_val = float(parts[4].split(":")[1])
         yaw_val = float(parts[5].split(":")[1])
 
-
         # Set the PoseStamped position
         pose_stamped.pose.position.x = x_val
         pose_stamped.pose.position.y = y_val
@@ -302,19 +303,18 @@ class GuiNode(Node):
 
         # Send the goal asynchronously
         self._action_client.wait_for_server()
-        self.get_logger().info('Sending goal...')
+        self.get_logger().info("Sending goal...")
         self._send_goal_future = self._action_client.send_goal_async(
             goal_msg, feedback_callback=self.feedback_callback
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
-
     def cancel_goal(self) -> None:
         """Cancel the currently active goal."""
-        self.get_logger().info('Canceling goal...')
-        
+        self.get_logger().info("Canceling goal...")
+
         # Check if a goal has been sent
-        if hasattr(self, '_send_goal_future') and self._send_goal_future:
+        if hasattr(self, "_send_goal_future") and self._send_goal_future:
             goal_handle = self._send_goal_future.result()
 
             # Cancel the goal
@@ -322,16 +322,16 @@ class GuiNode(Node):
                 cancel_future = goal_handle.cancel_goal_async()
                 cancel_future.add_done_callback(self.cancel_result_callback)
             else:
-                self.get_logger().warn('No active goal to cancel.')
+                self.get_logger().warn("No active goal to cancel.")
 
     def cancel_result_callback(self, future):
         """Callback when the goal cancel request has been completed."""
         try:
             result = future.result()
             if result:
-                self.get_logger().info('Goal has been successfully canceled.')
+                self.get_logger().info("Goal has been successfully canceled.")
             else:
-                self.get_logger().warn('Goal cancel request failed.')
+                self.get_logger().warn("Goal cancel request failed.")
         except Exception as e:
             self.get_logger().error(f"Error during goal cancel: {e}")
 
@@ -339,20 +339,20 @@ class GuiNode(Node):
     def goal_response_callback(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.get_logger().info('Goal rejected :(')
+            self.get_logger().info("Goal rejected :(")
             return
 
-        self.get_logger().info('Goal accepted :)')
+        self.get_logger().info("Goal accepted :)")
         self._get_result_future = goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self.get_result_callback)
 
     def feedback_callback(self, feedback_msg):
-            feedback = feedback_msg.feedback.feedback
-            # self.get_logger().info(f'Received feedback: x={feedback.x}, y={feedback.y}, z={feedback.z}')
+        feedback = feedback_msg.feedback.feedback
+        # self.get_logger().info(f'Received feedback: x={feedback.x}, y={feedback.y}, z={feedback.z}')
 
     def get_result_callback(self, future):
         result = future.result().result.result
-        self.get_logger().info(f'Goal result: x={result.x}, y={result.y}, z={result.z}')
+        self.get_logger().info(f"Goal result: x={result.x}, y={result.y}, z={result.z}")
 
     def odom_callback(self, msg: Odometry) -> None:
         """Callback function that is triggered when an odometry message is received."""
@@ -464,6 +464,7 @@ def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
     """Run the ROS2 node in a separate thread using a MultiThreadedExecutor."""
     rclpy.spin(ros_node, executor)
 
+
 def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
     # Initialize QApplication before creating any widgets
@@ -473,7 +474,7 @@ def main(args: Optional[list[str]] = None) -> None:
     rclpy.init(args=args)
     ros_node = GuiNode()
     executor = MultiThreadedExecutor()
-    
+
     # Run ROS in a separate thread
     ros_thread = Thread(target=run_ros_node, args=(ros_node, executor), daemon=True)
     ros_thread.start()
