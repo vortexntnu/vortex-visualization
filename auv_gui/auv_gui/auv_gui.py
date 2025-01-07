@@ -183,6 +183,17 @@ class GuiNode(Node):
         self.z_input.setPlaceholderText("Z")
         self.z_input.setValidator(QDoubleValidator())
 
+        # Inputs for roll, pitch, yaw
+        self.roll_input = QLineEdit()
+        self.roll_input.setPlaceholderText("Roll")
+        self.roll_input.setValidator(QDoubleValidator())
+        self.pitch_input = QLineEdit()
+        self.pitch_input.setPlaceholderText("Pitch")
+        self.pitch_input.setValidator(QDoubleValidator())
+        self.yaw_input = QLineEdit()
+        self.yaw_input.setPlaceholderText("Yaw")
+        self.yaw_input.setValidator(QDoubleValidator())
+
         # Buttons
         self.add_button = QPushButton("Add Waypoint")
         self.add_button.clicked.connect(self.add_waypoint)
@@ -194,23 +205,35 @@ class GuiNode(Node):
         self.clear_button = QPushButton("Clear Waypoints")
         self.clear_button.clicked.connect(self.clear_waypoints)
 
+        self.cancel_button = QPushButton("Cancel Mission")
+        self.cancel_button.clicked.connect(self.cancel_goal)
+
     def add_waypoint(self):
         """Add a waypoint to the list widget."""
         x = self.x_input.text().strip()
         y = self.y_input.text().strip()
         z = self.z_input.text().strip()
+        roll = self.roll_input.text().strip() or 0
+        pitch = self.pitch_input.text().strip() or 0
+        yaw = self.yaw_input.text().strip() or 0
 
         if x and y and z:
             list_entry = f"X: {x}, Y: {y}, Z: {z}"
+            list_entry += f", Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}"
             self.waypoint_list.addItem(QListWidgetItem(list_entry))
+        else:
+            self.get_logger().warn("Invalid waypoint.")
 
-            # Clear inputs
-            self.x_input.clear()
-            self.y_input.clear()
-            self.z_input.clear()
+        # Clear inputs
+        self.x_input.clear()
+        self.y_input.clear()
+        self.z_input.clear()
+        self.roll_input.clear()
+        self.pitch_input.clear()
+        self.yaw_input.clear()
 
-            # Enable the send button if there's at least one waypoint
-            self.send_button.setEnabled(True)
+        # Enable the send button if there's at least one waypoint
+        self.send_button.setEnabled(True)
 
     # def send_mission(self):
     #     """Publish an entire list of waypoints as a single Waypoints message."""
@@ -257,17 +280,23 @@ class GuiNode(Node):
         x_val = float(parts[0].split(":")[1])
         y_val = float(parts[1].split(":")[1])
         z_val = float(parts[2].split(":")[1])
+        roll_val = float(parts[3].split(":")[1])
+        pitch_val = float(parts[4].split(":")[1])
+        yaw_val = float(parts[5].split(":")[1])
+
 
         # Set the PoseStamped position
         pose_stamped.pose.position.x = x_val
         pose_stamped.pose.position.y = y_val
         pose_stamped.pose.position.z = z_val
 
+        quat = euler_to_quaternion(roll_val, pitch_val, yaw_val)
+
         # Set orientation (identity quaternion if not specified)
-        pose_stamped.pose.orientation.x = 0.0
-        pose_stamped.pose.orientation.y = 0.0
-        pose_stamped.pose.orientation.z = 0.0
-        pose_stamped.pose.orientation.w = 1.0
+        pose_stamped.pose.orientation.x = quat[0]
+        pose_stamped.pose.orientation.y = quat[1]
+        pose_stamped.pose.orientation.z = quat[2]
+        pose_stamped.pose.orientation.w = quat[3]
 
         goal_msg.goal = pose_stamped
 
@@ -280,6 +309,31 @@ class GuiNode(Node):
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
 
+    def cancel_goal(self) -> None:
+        """Cancel the currently active goal."""
+        self.get_logger().info('Canceling goal...')
+        
+        # Check if a goal has been sent
+        if hasattr(self, '_send_goal_future') and self._send_goal_future:
+            goal_handle = self._send_goal_future.result()
+
+            # Cancel the goal
+            if goal_handle:
+                cancel_future = goal_handle.cancel_goal_async()
+                cancel_future.add_done_callback(self.cancel_result_callback)
+            else:
+                self.get_logger().warn('No active goal to cancel.')
+
+    def cancel_result_callback(self, future):
+        """Callback when the goal cancel request has been completed."""
+        try:
+            result = future.result()
+            if result:
+                self.get_logger().info('Goal has been successfully canceled.')
+            else:
+                self.get_logger().warn('Goal cancel request failed.')
+        except Exception as e:
+            self.get_logger().error(f"Error during goal cancel: {e}")
 
     # --- Callback functions ---
     def goal_response_callback(self, future):
@@ -410,9 +464,6 @@ def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
     """Run the ROS2 node in a separate thread using a MultiThreadedExecutor."""
     rclpy.spin(ros_node, executor)
 
-        
-
-
 def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
     # Initialize QApplication before creating any widgets
@@ -481,10 +532,28 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.z_input.setPlaceholderText("Z")
     ros_node.z_input.setValidator(QDoubleValidator())
 
+    # Inputs for roll, pitch, yaw
+    ros_node.roll_input = QLineEdit()
+    ros_node.roll_input.setPlaceholderText("Roll")
+    ros_node.roll_input.setValidator(QDoubleValidator())
+
+    ros_node.pitch_input = QLineEdit()
+    ros_node.pitch_input.setPlaceholderText("Pitch")
+    ros_node.pitch_input.setValidator(QDoubleValidator())
+
+    ros_node.yaw_input = QLineEdit()
+    ros_node.yaw_input.setPlaceholderText("Yaw")
+    ros_node.yaw_input.setValidator(QDoubleValidator())
+
     inputs_layout.addWidget(QLabel("Waypoint:"))
     inputs_layout.addWidget(ros_node.x_input)
     inputs_layout.addWidget(ros_node.y_input)
     inputs_layout.addWidget(ros_node.z_input)
+
+    inputs_layout.addWidget(QLabel("Axes:"))
+    inputs_layout.addWidget(ros_node.roll_input)
+    inputs_layout.addWidget(ros_node.pitch_input)
+    inputs_layout.addWidget(ros_node.yaw_input)
 
     # Buttons for mission interface
     ros_node.add_button = QPushButton("Add Waypoint")
@@ -497,9 +566,13 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.clear_button = QPushButton("Clear Waypoints")
     ros_node.clear_button.clicked.connect(ros_node.clear_waypoints)
 
+    ros_node.cancel_button = QPushButton("Cancel Mission")
+    ros_node.cancel_button.clicked.connect(ros_node.cancel_goal)
+
     buttons_layout.addWidget(ros_node.add_button)
     buttons_layout.addWidget(ros_node.send_button)
     buttons_layout.addWidget(ros_node.clear_button)
+    buttons_layout.addWidget(ros_node.cancel_button)
 
     # List widget to display waypoints
     ros_node.waypoint_list = QListWidget()
