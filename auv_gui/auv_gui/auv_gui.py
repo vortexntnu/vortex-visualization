@@ -31,6 +31,14 @@ from rclpy.node import Node
 from std_msgs.msg import Float32
 from vortex_msgs.action import ReferenceFilterWaypoint
 
+from queue import Queue
+
+from auv_internal_gui import InternalStatusWidget
+import time
+import random
+
+MOCK_INTERNAL_DATA = True
+
 # --- Quaternion to Euler angles ---
 
 
@@ -165,10 +173,10 @@ class GuiNode(Node):
         )
 
         # Variables for internal status
-        self.current = 0.0
-        self.voltage = 0.0
-        self.temperature = 0.0
-        self.pressure = 0.0
+        self.current = Queue()
+        self.voltage = Queue()
+        self.temperature = Queue()
+        self.pressure = Queue()
 
         # --- Waypoint stuff ---
         # Create a publisher for the custom Waypoints message
@@ -236,7 +244,6 @@ class GuiNode(Node):
 
         # Enable the send button if there's at least one waypoint
         self.send_button.setEnabled(True)
-
 
     def clear_waypoints(self):
         """Clear the waypoint list."""
@@ -355,19 +362,23 @@ class GuiNode(Node):
 
     def current_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a current message is received."""
-        self.current = msg.data
+        temp_timestamp = time.time()
+        self.current.put((msg.data, temp_timestamp))
 
     def voltage_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a voltage message is received."""
-        self.voltage = msg.data
+        temp_timestamp = time.time()
+        self.voltage.put((msg.data, temp_timestamp))
 
     def temperature_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a temperature message is received."""
-        self.temperature = msg.data
+        temp_timestamp = time.time()
+        self.temperature.put((msg.data, temp_timestamp))
 
     def pressure_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a pressure message is received."""
-        self.pressure = msg.data
+        temp_timestamp = time.time()
+        self.pressure.put((msg.data, temp_timestamp))
 
 
 # --- Plotting ---
@@ -475,12 +486,9 @@ def main(args: Optional[list[str]] = None) -> None:
     tabs.addTab(position_widget, "Position")
 
     # --- Internal Status Tab ---
-    internal_widget = QWidget()
-    internal_layout = QVBoxLayout(internal_widget)
+    internal_status = InternalStatusWidget()
 
-    internal_status_label = QLabel(parent=internal_widget)
-    internal_layout.addWidget(internal_status_label)
-    tabs.addTab(internal_widget, "Internal")
+    tabs.addTab(internal_status.get_widget(), "Internal")
 
     gui.setCentralWidget(tabs)
     gui.showMaximized()
@@ -568,13 +576,18 @@ def main(args: Optional[list[str]] = None) -> None:
             orientation_text = f"Current Orientation:\nRoll: {ros_node.roll:.2f}\nPitch: {ros_node.pitch:.2f}\nYaw: {ros_node.yaw:.2f}"
             current_pos.setText(position_text + "\n\n\n" + orientation_text)
 
+        # mock data
+        if MOCK_INTERNAL_DATA:
+            ros_node.current.put((1.0 + (-0.15 + random.random() * 0.3), time.time()))
+            ros_node.voltage.put((12.0 + (-0.2 + random.random() * 0.4), time.time()))
+            ros_node.temperature.put((25.0 + (-0.5 + random.random()), time.time()))
+            ros_node.pressure.put(
+                (1013.25 + (-60 + random.random() * 120), time.time())
+            )
+
         # Update internal status
-        internal_status_label.setText(
-            f"Internal Status:\n"
-            f"Current: {ros_node.current:.2f}\n"
-            f"Voltage: {ros_node.voltage:.2f}\n"
-            f"Temperature: {ros_node.temperature:.2f}\n"
-            f"Pressure: {ros_node.pressure:.2f}"
+        internal_status.update(
+            ros_node.current, ros_node.voltage, ros_node.temperature, ros_node.pressure
         )
 
     # Set up the timer to call update_gui every 100ms
