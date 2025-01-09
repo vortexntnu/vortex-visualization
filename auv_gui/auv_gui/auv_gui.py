@@ -537,9 +537,6 @@ def main(args: Optional[list[str]] = None) -> None:
 
     tabs.addTab(internal_status.get_widget(), "Internal")
 
-    gui.setCentralWidget(tabs)
-    gui.showMaximized()
-
     # --- Mission Interface Tab ---
     mission_widget = QWidget()
     mission_layout = QVBoxLayout(mission_widget)
@@ -622,6 +619,9 @@ def main(args: Optional[list[str]] = None) -> None:
     mission_layout.addWidget(ros_node.waypoint_list)
 
     tabs.addTab(mission_widget, "Mission")
+
+    gui.setCentralWidget(tabs)
+    gui.showMaximized()
 
     # Use a QTimer to update plot, current position, and internal status in the main thread
     def update_gui() -> None:
