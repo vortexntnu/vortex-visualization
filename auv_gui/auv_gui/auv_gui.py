@@ -29,8 +29,15 @@ from PyQt6.QtWidgets import (
 from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float32
 from vortex_msgs.action import ReferenceFilterWaypoint, NavigateWaypoints
+
+best_effort_qos = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
 
 from queue import Queue
 
@@ -38,7 +45,7 @@ from auv_internal_gui import InternalStatusWidget
 import time
 import random
 
-MOCK_INTERNAL_DATA = True
+MOCK_INTERNAL_DATA = False
 
 # --- Quaternion to Euler angles ---
 
@@ -122,7 +129,7 @@ class GuiNode(Node):
         )
 
         # ROS2 parameters
-        self.declare_parameter("odom_topic", "/nucleus/odom")
+        self.declare_parameter("odom_topic", "/orca/odom")
         self.declare_parameter("current_topic", "/auv/power_sense_module/current")
         self.declare_parameter("voltage_topic", "/auv/power_sense_module/voltage")
         self.declare_parameter("temperature_topic", "/auv/temperature")
@@ -143,9 +150,9 @@ class GuiNode(Node):
             self.get_parameter("pressure_topic").get_parameter_value().string_value
         )
 
-        # Subscriber to the /nucleus/odom topic
+        # Subscriber to the /orca/odom topic
         self.subscription = self.create_subscription(
-            Odometry, odom_topic, self.odom_callback, 10
+            Odometry, odom_topic, self.odom_callback, qos_profile=best_effort_qos
         )
 
         # Variables to store odometry data
@@ -183,8 +190,6 @@ class GuiNode(Node):
         self.pressure = Queue()
 
         # --- Waypoint stuff ---
-        # Create a publisher for the custom Waypoints message
-        self.publisher_ = self.create_publisher(Pose, "waypoints", 10)
 
         # Inputs for X, Y, Z
         self.x_input = QLineEdit()
@@ -214,11 +219,11 @@ class GuiNode(Node):
 
         self.send_button_ref = QPushButton("Send Mission (ReferenceFilter)")
         self.send_button_ref.clicked.connect(self.send_goal_reference_filter)
-        self.send_button_ref.setEnabled(False)  # Disabled by default
+        self.send_button_ref.setEnabled(False)
 
         self.send_button_nav = QPushButton("Send Mission (NavigateWaypoints)")
         self.send_button_nav.clicked.connect(self.send_goal_navigate_waypoints)
-        self.send_button_nav.setEnabled(False)  # Disabled by default
+        self.send_button_nav.setEnabled(False)
 
         self.clear_button = QPushButton("Clear Waypoints")
         self.clear_button.clicked.connect(self.clear_waypoints)
@@ -295,17 +300,17 @@ class GuiNode(Node):
         """Send a single waypoint to the ReferenceFilter action."""
         waypoints = self.get_waypoints()
         if not waypoints or len(waypoints) != 1:
-            self.get_logger().error("ReferenceFilter requires exactly one waypoint.")
+            self.get_logger().error("This action requires exactly one waypoint.")
             return
 
         goal_msg = ReferenceFilterWaypoint.Goal()
         goal_msg.goal = waypoints[0]
 
         # Send the goal asynchronously
-        self._reference_filter_client.wait_for_server()
+        self._reference_filter_client.wait_for_server(timeout_sec=1.0)
         self.get_logger().info("Sending goal (ReferenceFilter)...")
         self._send_goal_future = self._reference_filter_client.send_goal_async(
-            goal_msg, feedback_callback=self.feedback_callback
+            goal_msg, feedback_callback=None
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
@@ -321,10 +326,10 @@ class GuiNode(Node):
         goal_msg.waypoints = waypoints
 
         # Send the goal asynchronously
-        self._navigate_waypoints_client.wait_for_server()
+        self._navigate_waypoints_client.wait_for_server(timeout_sec=1.0)
         self.get_logger().info("Sending goal (NavigateWaypoints)...")
         self._send_goal_future = self._navigate_waypoints_client.send_goal_async(
-            goal_msg, feedback_callback=self.feedback_callback
+            goal_msg, feedback_callback=None
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
@@ -373,13 +378,12 @@ class GuiNode(Node):
         self._get_result_future = goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self.get_result_callback)
 
-    def feedback_callback(self, feedback_msg):
-        feedback = feedback_msg.feedback
-        # self.get_logger().info(f'Received feedback: x={feedback.x}, y={feedback.y}, z={feedback.z}')
+    # def feedback_callback(self, feedback_msg):
+    #     feedback = feedback_msg.feedback
 
     def get_result_callback(self, future):
         result = future.result().result
-        # self.get_logger().info(f"Goal result: x={result.x}, y={result.y}, z={result.z}")
+        self.get_logger().info(f"Mission completed with result: {result}")
 
     def odom_callback(self, msg: Odometry) -> None:
         """Callback function that is triggered when an odometry message is received."""
@@ -620,6 +624,7 @@ def main(args: Optional[list[str]] = None) -> None:
 
     tabs.addTab(mission_widget, "Mission")
 
+    # Start in fullscreen
     gui.setCentralWidget(tabs)
     gui.showMaximized()
 
