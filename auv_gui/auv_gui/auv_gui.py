@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
+    QAbstractItemView,
 )
 from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
@@ -249,47 +250,56 @@ class GuiNode(Node):
         self.pitch_input.clear()
         self.yaw_input.clear()
 
-        # Enable the send button if there's at least one waypoint
-        self.send_button_nav.setEnabled(True)
-        self.send_button_ref.setEnabled(True)
-
     def clear_waypoints(self):
         """Clear the waypoint list."""
         self.waypoint_list.clear()
         self.send_button_nav.setEnabled(False)
         self.send_button_ref.setEnabled(False)
 
-    def get_waypoint(self):
-        if not self.waypoint_list.selectedItems():
-            self.get_logger().error("No waypoint selected.")
+    def get_waypoints(self):
+        """Retrieve waypoints from the selected items in the list."""
+        selected_items = self.waypoint_list.selectedItems()
+
+        if not selected_items:
+            self.get_logger().error("No waypoints selected.")
             return None
-        pose_stamped = PoseStamped()
 
-        text = self.waypoint_list.selectedItems()[0].text()
-        parts = text.replace(" ", "").split(",")
-        x_val = float(parts[0].split(":")[1])
-        y_val = float(parts[1].split(":")[1])
-        z_val = float(parts[2].split(":")[1])
-        roll_val = float(parts[3].split(":")[1])
-        pitch_val = float(parts[4].split(":")[1])
-        yaw_val = float(parts[5].split(":")[1])
+        waypoints = []
+        for item in selected_items:
+            text = item.text()
+            parts = text.replace(" ", "").split(",")
+            x_val = float(parts[0].split(":")[1])
+            y_val = float(parts[1].split(":")[1])
+            z_val = float(parts[2].split(":")[1])
+            roll_val = float(parts[3].split(":")[1])
+            pitch_val = float(parts[4].split(":")[1])
+            yaw_val = float(parts[5].split(":")[1])
 
-        pose_stamped.pose.position.x = x_val
-        pose_stamped.pose.position.y = y_val
-        pose_stamped.pose.position.z = z_val
+            pose_stamped = PoseStamped()
+            pose_stamped.pose.position.x = x_val
+            pose_stamped.pose.position.y = y_val
+            pose_stamped.pose.position.z = z_val
 
-        quat = euler_to_quaternion(roll_val, pitch_val, yaw_val)
+            quat = euler_to_quaternion(roll_val, pitch_val, yaw_val)
+            pose_stamped.pose.orientation.x = quat[0]
+            pose_stamped.pose.orientation.y = quat[1]
+            pose_stamped.pose.orientation.z = quat[2]
+            pose_stamped.pose.orientation.w = quat[3]
 
-        pose_stamped.pose.orientation.x = quat[0]
-        pose_stamped.pose.orientation.y = quat[1]
-        pose_stamped.pose.orientation.z = quat[2]
-        pose_stamped.pose.orientation.w = quat[3]
-        return pose_stamped
+            waypoints.append(pose_stamped)
+
+        return waypoints
+
 
     def send_goal_reference_filter(self):
-        goal_msg = ReferenceFilterWaypoint.Goal()
+        """Send a single waypoint to the ReferenceFilter action."""
+        waypoints = self.get_waypoints()
+        if not waypoints or len(waypoints) != 1:
+            self.get_logger().error("ReferenceFilter requires exactly one waypoint.")
+            return
 
-        goal_msg.goal = self.get_waypoint()
+        goal_msg = ReferenceFilterWaypoint.Goal()
+        goal_msg.goal = waypoints[0]
 
         # Send the goal asynchronously
         self._reference_filter_client.wait_for_server()
@@ -299,11 +309,16 @@ class GuiNode(Node):
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
-    def send_goal_navigate_waypoints(self):
-        goal_msg = NavigateWaypoints.Goal()
 
-        waypoints = self.get_waypoint()
-        goal_msg.waypoints = [waypoints]
+    def send_goal_navigate_waypoints(self):
+        """Send multiple waypoints to the NavigateWaypoints action."""
+        waypoints = self.get_waypoints()
+        if not waypoints or len(waypoints) < 2:
+            self.get_logger().error("NavigateWaypoints requires multiple waypoints.")
+            return
+
+        goal_msg = NavigateWaypoints.Goal()
+        goal_msg.waypoints = waypoints
 
         # Send the goal asynchronously
         self._navigate_waypoints_client.wait_for_server()
@@ -312,6 +327,14 @@ class GuiNode(Node):
             goal_msg, feedback_callback=self.feedback_callback
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
+
+    def update_button_states(self):
+        """Enable/Disable buttons based on waypoint selection."""
+        selected_count = len(self.waypoint_list.selectedItems())
+
+        self.send_button_ref.setEnabled(selected_count == 1)
+        self.send_button_nav.setEnabled(selected_count > 1)
+
 
     def cancel_goal(self) -> None:
         """Cancel the currently active goal."""
@@ -587,6 +610,11 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # List widget to display waypoints
     ros_node.waypoint_list = QListWidget()
+    ros_node.waypoint_list.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
+    ros_node.waypoint_list.itemSelectionChanged.connect(ros_node.update_button_states)
+
 
     # Add layouts to the main layout
     mission_layout.addLayout(inputs_layout)
