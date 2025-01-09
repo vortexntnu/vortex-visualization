@@ -10,7 +10,7 @@ from geometry_msgs.msg import Pose, PoseStamped
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from nav_msgs.msg import Odometry
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QDoubleValidator, QAction
+from PyQt6.QtGui import QDoubleValidator, QAction, QPalette, QColor
 from PyQt6.QtWidgets import (
     QApplication,
     QGridLayout,
@@ -314,7 +314,9 @@ class GuiNode(Node):
         goal_msg.goal = waypoints[0]
 
         # Send the goal asynchronously
-        self._reference_filter_client.wait_for_server(timeout_sec=1.0)
+        if not self._reference_filter_client.wait_for_server(timeout_sec=1.0):
+            self.get_logger().error("ReferenceFilter action server not available.")
+            return
         self.get_logger().info("Sending goal (ReferenceFilter)...")
         self._send_goal_future = self._reference_filter_client.send_goal_async(
             goal_msg, feedback_callback=None
@@ -356,10 +358,12 @@ class GuiNode(Node):
         goal_msg.waypoints = waypoints
 
         # Send the goal asynchronously
-        self._navigate_waypoints_client.wait_for_server()
-        self.get_logger().info("Sending reordered waypoints to NavigateWaypoints...")
+        if not self._navigate_waypoints_client.wait_for_server(timeout_sec=1.0):
+            self.get_logger().error("NavigateWaypoints action server not available.")
+            return
+        self.get_logger().info("Sending waypoints to NavigateWaypoints...")
         self._send_goal_future = self._navigate_waypoints_client.send_goal_async(
-            goal_msg, feedback_callback=self.feedback_callback
+            goal_msg, feedback_callback=None
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
@@ -395,8 +399,6 @@ class GuiNode(Node):
         menu.addAction(transfer_action)
         menu.exec(self.waypoint_list.viewport().mapToGlobal(pos))
 
-
-
     def transfer_selected_waypoint(self):
         selected_items = self.waypoint_list.selectedItems()
         if not selected_items:
@@ -409,7 +411,7 @@ class GuiNode(Node):
 
         self.send_button_nav.setEnabled(self.ordered_list.count() > 1)
 
-
+    # --- Callback functions ---
     def cancel_result_callback(self, future):
         """Callback when the goal cancel request has been completed."""
         try:
@@ -421,7 +423,7 @@ class GuiNode(Node):
         except Exception as e:
             self.get_logger().error(f"Error during goal cancel: {e}")
 
-    # --- Callback functions ---
+    
     def goal_response_callback(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
@@ -436,8 +438,8 @@ class GuiNode(Node):
     #     feedback = feedback_msg.feedback
 
     def get_result_callback(self, future):
-        result = future.result().result
-        self.get_logger().info(f"Mission completed with result: {result}")
+        result = future.result().result.success
+        self.get_logger().info(f"Mission completed successfully: {result}")
 
     def odom_callback(self, msg: Odometry) -> None:
         """Callback function that is triggered when an odometry message is received."""
@@ -515,7 +517,7 @@ class PlotCanvas(FigureCanvas):
         self.x_data: list[float] = []
         self.y_data: list[float] = []
         self.z_data: list[float] = []
-        (self.line,) = self.ax.plot([], [], [], "b-")
+        (self.line,) = self.ax.plot([], [], [], "k-")
 
     def update_plot(
         self, x_data: list[float], y_data: list[float], z_data: list[float]
@@ -558,6 +560,14 @@ def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
     # Initialize QApplication before creating any widgets
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.darkRed)
+    palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.darkRed)
+    palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.black)
+    palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    palette.setColor(QPalette.ColorRole.Link, Qt.GlobalColor.red)
+    app.setPalette(palette)
 
     # Initialize ROS2 after QApplication
     rclpy.init(args=args)
@@ -568,12 +578,10 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_thread = Thread(target=run_ros_node, args=(ros_node, executor), daemon=True)
     ros_thread.start()
 
-    # Setup the PyQt5 application and window
     gui = QMainWindow()
     gui.setWindowTitle("Vortex GUI")
     gui.setGeometry(100, 100, 600, 400)
-
-    # Create the tab widget
+    gui.autoFillBackground()
     tabs = QTabWidget()
     tabs.setTabPosition(QTabWidget.TabPosition.North)
     tabs.setMovable(True)
