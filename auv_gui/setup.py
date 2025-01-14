@@ -1,11 +1,16 @@
 from setuptools import setup
 
-PACKAGE_NAME = "auv_gui"
+package_name = "auv_gui"
 
 setup(
-    name=PACKAGE_NAME,
+    name=package_name,
     version="0.0.0",
-    packages=[PACKAGE_NAME],
+    packages=[package_name],
+    data_files=[
+        ("share/ament_index/resource_index/packages", 
+                ["resource/" + package_name]),
+        ("share/" + package_name, ["package.xml"]),
+    ],
     install_requires=["setuptools"],
     zip_safe=True,
     maintainer="sondre",

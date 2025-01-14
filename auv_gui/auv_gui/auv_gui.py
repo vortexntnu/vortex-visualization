@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import math
 import sys
 from threading import Thread
@@ -42,7 +44,7 @@ best_effort_qos = QoSProfile(
 
 from queue import Queue
 
-from auv_internal_gui import InternalStatusWidget
+from auv_gui.auv_internal_gui import InternalStatusWidget
 import time
 import random
 
