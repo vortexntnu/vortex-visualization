@@ -158,6 +158,8 @@ class GuiNode(Node):
             Odometry, odom_topic, self.odom_callback, qos_profile=best_effort_qos
         )
 
+        self.waypoints = []
+
         # Variables to store odometry data
         self.xpos_data: list[float] = []  # x position
         self.ypos_data: list[float] = []  # y position
@@ -332,7 +334,12 @@ class GuiNode(Node):
             self.get_logger().error("NavigateWaypoints requires multiple waypoints.")
             return
 
-        waypoints = []
+        # Add first waypoint for plotting
+        current_pos = PoseStamped()
+        current_pos.pose.position.x = self.xpos_data[-1]
+        current_pos.pose.position.y = self.ypos_data[-1]
+        current_pos.pose.position.z = -self.zpos_data[-1]
+        self.waypoints = [current_pos]
         for i in range(self.ordered_list.count()):
             text = self.ordered_list.item(i).text()
             parts = text.replace(" ", "").split(",")
@@ -354,10 +361,10 @@ class GuiNode(Node):
             pose_stamped.pose.orientation.z = quat[2]
             pose_stamped.pose.orientation.w = quat[3]
 
-            waypoints.append(pose_stamped)
+            self.waypoints.append(pose_stamped)
 
         goal_msg = NavigateWaypoints.Goal()
-        goal_msg.waypoints = waypoints
+        goal_msg.waypoints = self.waypoints[1:]
 
         # Send the goal asynchronously
         if not self._navigate_waypoints_client.wait_for_server(timeout_sec=1.0):
@@ -551,6 +558,23 @@ class PlotCanvas(FigureCanvas):
 
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
+
+        # Plot waypoints when they are received
+        if len(self.gui_node.waypoints) > 0:
+            # self.ax.cla()
+            x_coords = []
+            y_coords = []
+            z_coords = []
+            for waypoint in self.gui_node.waypoints:
+                x = waypoint.pose.position.x
+                y = waypoint.pose.position.y
+                z = -waypoint.pose.position.z
+                x_coords.append(x)
+                y_coords.append(y)
+                z_coords.append(z)
+                self.ax.plot([x], [y], [z], "bo")
+            self.ax.plot(x_coords, y_coords, z_coords, "b-")
+            self.gui_node.waypoints = []
 
 
 def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
