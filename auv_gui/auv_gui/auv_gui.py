@@ -623,11 +623,11 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # --- Position Section ---
     plot_canvas = PlotCanvas(ros_node, mission_position_widget)
-    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 3)  # Spanning 2 columns
+    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 4)  # Spanning 2 columns
 
     current_pos = QLabel(parent=mission_position_widget)
     current_pos.setText("Current Position: Not Available")
-    mission_position_layout.addWidget(current_pos, 0, 3)
+    mission_position_layout.addWidget(current_pos, 0, 4)
 
     # --- Mission Section ---
     inputs_layout = QHBoxLayout()
@@ -712,11 +712,11 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.ordered_list.setAlternatingRowColors(True)
 
     # Add layouts to the mission position layout
-    mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 3)  # Spanning across 3 columns
-    mission_position_layout.addLayout(buttons_layout, 2, 0, 1, 3)  # Spanning across 3 columns
-    mission_position_layout.addWidget(ros_node.waypoint_list, 3, 0, 1, 3)
-    mission_position_layout.addWidget(ros_node.ordered_list, 3, 3)
-    mission_position_layout.addWidget(ros_node.send_button_nav, 2, 3)
+    mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 4)  # Spanning across 3 columns
+    mission_position_layout.addLayout(buttons_layout, 2, 0, 1, 4)  # Spanning across 3 columns
+    mission_position_layout.addWidget(ros_node.waypoint_list, 3, 0, 1, 4)
+    mission_position_layout.addWidget(ros_node.ordered_list, 3, 4)
+    mission_position_layout.addWidget(ros_node.send_button_nav, 2, 4)
 
     # Add the combined Mission and Position tab
     tabs.addTab(mission_position_widget, "Mission")
