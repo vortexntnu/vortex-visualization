@@ -593,6 +593,11 @@ def main(args: Optional[list[str]] = None) -> None:
     palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.black)
     palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
     palette.setColor(QPalette.ColorRole.Link, Qt.GlobalColor.red)
+    palette.setColor(QPalette.ColorRole.Base, Qt.GlobalColor.white)
+    palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
+    palette.setColor(QPalette.ColorRole.Shadow, Qt.GlobalColor.darkGray)
+    palette.setColor(QPalette.ColorRole.Button, Qt.GlobalColor.white)
+    palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
     app.setPalette(palette)
 
     # Initialize ROS2 after QApplication
@@ -612,28 +617,19 @@ def main(args: Optional[list[str]] = None) -> None:
     tabs.setTabPosition(QTabWidget.TabPosition.North)
     tabs.setMovable(True)
 
-    # --- Position Tab ---
-    position_widget = QWidget()
-    layout = QGridLayout(position_widget)  # grid layout
+    # --- Mission and Position Tab ---
+    mission_position_widget = QWidget()
+    mission_position_layout = QGridLayout(mission_position_widget)
 
-    plot_canvas = PlotCanvas(ros_node, position_widget)
-    layout.addWidget(plot_canvas, 0, 0)
+    # --- Position Section ---
+    plot_canvas = PlotCanvas(ros_node, mission_position_widget)
+    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 3)  # Spanning 2 columns
 
-    current_pos = QLabel(parent=position_widget)
-    layout.addWidget(current_pos, 0, 1)
+    current_pos = QLabel(parent=mission_position_widget)
+    current_pos.setText("Current Position: Not Available")
+    mission_position_layout.addWidget(current_pos, 0, 3)
 
-    tabs.addTab(position_widget, "Position")
-
-    # --- Internal Status Tab ---
-    internal_status = InternalStatusWidget()
-
-    tabs.addTab(internal_status.get_widget(), "Internal")
-
-    # --- Mission Interface Tab ---
-    mission_widget = QWidget()
-    mission_layout = QGridLayout(mission_widget)
-
-    # Layouts for mission interface
+    # --- Mission Section ---
     inputs_layout = QHBoxLayout()
     buttons_layout = QHBoxLayout()
 
@@ -701,30 +697,34 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.waypoint_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     ros_node.waypoint_list.customContextMenuRequested.connect(ros_node.show_waypoint_context_menu)
     ros_node.waypoint_list.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
+        QAbstractItemView.SelectionMode.ExtendedSelection
+    )
     ros_node.waypoint_list.setAlternatingRowColors(True)
     ros_node.waypoint_list.itemSelectionChanged.connect(ros_node.update_button_states)
-    
 
-    # Create a re-orderable list for NavigateWaypoints
+    # Re-orderable list for NavigateWaypoints
     ros_node.ordered_list = QListWidget()
     ros_node.ordered_list.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
+        QAbstractItemView.SelectionMode.ExtendedSelection
+    )
     ros_node.ordered_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
     ros_node.ordered_list.model().rowsMoved.connect(ros_node.update_ordered_waypoints)
     ros_node.ordered_list.setAlternatingRowColors(True)
 
+    # Add layouts to the mission position layout
+    mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 3)  # Spanning across 3 columns
+    mission_position_layout.addLayout(buttons_layout, 2, 0, 1, 3)  # Spanning across 3 columns
+    mission_position_layout.addWidget(ros_node.waypoint_list, 3, 0, 1, 3)
+    mission_position_layout.addWidget(ros_node.ordered_list, 3, 3)
+    mission_position_layout.addWidget(ros_node.send_button_nav, 2, 3)
 
-    # Add layouts to the main layout
-    mission_layout.addLayout(inputs_layout, 0, 0)
-    mission_layout.addLayout(buttons_layout, 1, 0)
-    mission_layout.addWidget(ros_node.send_button_nav, 1, 1)
-    mission_layout.addWidget(ros_node.waypoint_list, 2, 0)
-    mission_layout.addWidget(ros_node.ordered_list, 2, 1)
+    # Add the combined Mission and Position tab
+    tabs.addTab(mission_position_widget, "Mission")
 
-    tabs.addTab(mission_widget, "Mission")
+    # --- Internal Status Tab ---
+    internal_status = InternalStatusWidget()
+    tabs.addTab(internal_status.get_widget(), "Internal")
+
 
     # Start in fullscreen
     gui.setCentralWidget(tabs)
