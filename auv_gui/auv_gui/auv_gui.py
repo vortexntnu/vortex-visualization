@@ -8,12 +8,13 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import rclpy
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import PoseStamped
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from nav_msgs.msg import Odometry
-from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QDoubleValidator, QAction, QPalette, QColor
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QAction, QDoubleValidator, QPalette
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QGridLayout,
     QHBoxLayout,
@@ -22,19 +23,17 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QMenu,
     QPushButton,
     QTabWidget,
-    QVBoxLayout,
     QWidget,
-    QAbstractItemView,
-    QMenu,
 )
 from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float32
-from vortex_msgs.action import ReferenceFilterWaypoint, NavigateWaypoints
+from vortex_msgs.action import NavigateWaypoints, ReferenceFilterWaypoint
 
 best_effort_qos = QoSProfile(
     reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -42,11 +41,11 @@ best_effort_qos = QoSProfile(
     depth=1,
 )
 
+import random
+import time
 from queue import Queue
 
 from auv_gui.auv_internal_gui import InternalStatusWidget
-import time
-import random
 
 MOCK_INTERNAL_DATA = False
 
@@ -269,8 +268,9 @@ class GuiNode(Node):
 
     def update_ordered_waypoints(self):
         """Update internal order of waypoints based on the reordered list."""
-        ordered_items = [self.ordered_list.item(i).text() for i in range(self.ordered_list.count())]
-
+        ordered_items = [
+            self.ordered_list.item(i).text() for i in range(self.ordered_list.count())
+        ]
 
     def get_waypoints(self):
         """Retrieve waypoints from the selected items in the list."""
@@ -306,7 +306,6 @@ class GuiNode(Node):
 
         return waypoints
 
-
     def send_goal_reference_filter(self):
         """Send a single waypoint to the ReferenceFilter action."""
         waypoints = self.get_waypoints()
@@ -326,7 +325,6 @@ class GuiNode(Node):
             goal_msg, feedback_callback=None
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
-
 
     def send_goal_navigate_waypoints(self):
         """Send reordered waypoints to the NavigateWaypoints action."""
@@ -376,13 +374,11 @@ class GuiNode(Node):
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
-
     def update_button_states(self):
         """Enable/Disable buttons based on waypoint selection."""
         selected_count = len(self.waypoint_list.selectedItems())
 
         self.send_button_ref.setEnabled(selected_count == 1)
-
 
     def cancel_goal(self) -> None:
         """Cancel the currently active goal."""
@@ -398,7 +394,6 @@ class GuiNode(Node):
                 cancel_future.add_done_callback(self.cancel_result_callback)
             else:
                 self.get_logger().warn("No active goal to cancel.")
-
 
     def show_waypoint_context_menu(self, pos):
         """Display the context menu when a waypoint is right-clicked."""
@@ -432,7 +427,6 @@ class GuiNode(Node):
         except Exception as e:
             self.get_logger().error(f"Error during goal cancel: {e}")
 
-    
     def goal_response_callback(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
@@ -586,7 +580,7 @@ def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
     # Initialize QApplication before creating any widgets
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')
+    app.setStyle("Fusion")
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.darkRed)
     palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.darkRed)
@@ -623,7 +617,7 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # --- Position Section ---
     plot_canvas = PlotCanvas(ros_node, mission_position_widget)
-    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 4)  # Spanning 2 columns
+    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 4)
 
     current_pos = QLabel(parent=mission_position_widget)
     current_pos.setText("Current Position: Not Available")
@@ -675,11 +669,11 @@ def main(args: Optional[list[str]] = None) -> None:
 
     ros_node.send_button_ref = QPushButton("Send Mission (ReferenceFilter)")
     ros_node.send_button_ref.clicked.connect(ros_node.send_goal_reference_filter)
-    ros_node.send_button_ref.setEnabled(False)  # Disabled by default
+    ros_node.send_button_ref.setEnabled(False)
 
     ros_node.send_button_nav = QPushButton("Send Mission (NavigateWaypoints)")
     ros_node.send_button_nav.clicked.connect(ros_node.send_goal_navigate_waypoints)
-    ros_node.send_button_nav.setEnabled(False)  # Disabled by default
+    ros_node.send_button_nav.setEnabled(False)
 
     ros_node.clear_button = QPushButton("Clear Waypoints")
     ros_node.clear_button.clicked.connect(ros_node.clear_waypoints)
@@ -695,7 +689,9 @@ def main(args: Optional[list[str]] = None) -> None:
     # List widget to display waypoints
     ros_node.waypoint_list = QListWidget()
     ros_node.waypoint_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-    ros_node.waypoint_list.customContextMenuRequested.connect(ros_node.show_waypoint_context_menu)
+    ros_node.waypoint_list.customContextMenuRequested.connect(
+        ros_node.show_waypoint_context_menu
+    )
     ros_node.waypoint_list.setSelectionMode(
         QAbstractItemView.SelectionMode.ExtendedSelection
     )
@@ -712,19 +708,16 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.ordered_list.setAlternatingRowColors(True)
 
     # Add layouts to the mission position layout
-    mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 4)  # Spanning across 3 columns
-    mission_position_layout.addLayout(buttons_layout, 2, 0, 1, 4)  # Spanning across 3 columns
+    mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 4)
+    mission_position_layout.addLayout(buttons_layout, 2, 0, 1, 4)
     mission_position_layout.addWidget(ros_node.waypoint_list, 3, 0, 1, 4)
     mission_position_layout.addWidget(ros_node.ordered_list, 3, 4)
     mission_position_layout.addWidget(ros_node.send_button_nav, 2, 4)
-
-    # Add the combined Mission and Position tab
     tabs.addTab(mission_position_widget, "Mission")
 
     # --- Internal Status Tab ---
     internal_status = InternalStatusWidget()
     tabs.addTab(internal_status.get_widget(), "Internal")
-
 
     # Start in fullscreen
     gui.setCentralWidget(tabs)
