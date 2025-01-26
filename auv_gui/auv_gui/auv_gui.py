@@ -384,11 +384,9 @@ class GuiNode(Node):
         """Cancel the currently active goal."""
         self.get_logger().info("Canceling goal...")
 
-        # Check if a goal has been sent
         if hasattr(self, "_send_goal_future") and self._send_goal_future:
             goal_handle = self._send_goal_future.result()
 
-            # Cancel the goal
             if goal_handle:
                 cancel_future = goal_handle.cancel_goal_async()
                 cancel_future.add_done_callback(self.cancel_result_callback)
@@ -681,10 +679,14 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.cancel_button = QPushButton("Cancel Mission")
     ros_node.cancel_button.clicked.connect(ros_node.cancel_goal)
 
+    ros_node.clear_plot_button = QPushButton("Clear Plot")
+    ros_node.clear_plot_button.clicked.connect(plot_canvas.ax.clear)
+
     buttons_layout.addWidget(ros_node.add_button)
     buttons_layout.addWidget(ros_node.send_button_ref)
     buttons_layout.addWidget(ros_node.clear_button)
     buttons_layout.addWidget(ros_node.cancel_button)
+    buttons_layout.addWidget(ros_node.clear_plot_button)
 
     # List widget to display waypoints
     ros_node.waypoint_list = QListWidget()
@@ -695,7 +697,6 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.waypoint_list.setSelectionMode(
         QAbstractItemView.SelectionMode.ExtendedSelection
     )
-    ros_node.waypoint_list.setAlternatingRowColors(True)
     ros_node.waypoint_list.itemSelectionChanged.connect(ros_node.update_button_states)
 
     # Re-orderable list for NavigateWaypoints
@@ -705,7 +706,6 @@ def main(args: Optional[list[str]] = None) -> None:
     )
     ros_node.ordered_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
     ros_node.ordered_list.model().rowsMoved.connect(ros_node.update_ordered_waypoints)
-    ros_node.ordered_list.setAlternatingRowColors(True)
 
     # Add layouts to the mission position layout
     mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 4)
