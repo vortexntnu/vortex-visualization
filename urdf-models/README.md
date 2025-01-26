@@ -22,4 +22,3 @@ These tutorials were useful:
 - [URDF ROS2 Tutorial](https://docs.ros.org/en/humble/Tutorials/Intermediate/URDF/URDF-Main.html)
 - [Conventions for URDF files](http://wiki.ros.org/Industrial/Tutorials/Create%20a%20URDF%20for%20an%20Industrial%20Robot)
 - [Export URDF from SolidWorks](http://wiki.ros.org/sw_urdf_exporter/Tutorials/Export%20an%20Assembly)
-

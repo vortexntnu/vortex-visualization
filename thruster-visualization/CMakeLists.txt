@@ -26,7 +26,7 @@ vortex_msgs
 geometry_msgs
 )
 
-add_executable(${PROJECT_NAME}_node 
+add_executable(${PROJECT_NAME}_node
   src/thruster_broadcaster.cpp
   src/thruster_visualization_node.cpp)
 
