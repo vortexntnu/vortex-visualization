@@ -2,17 +2,18 @@
 
 import math
 import sys
+import signal
 from threading import Thread
 from typing import Optional
+from auv_gui.widgets import OpenGLPlotWidget, InternalStatusWidget
+from ament_index_python.packages import get_package_share_directory
 
-import matplotlib.pyplot as plt
 import numpy as np
 import rclpy
 from geometry_msgs.msg import PoseStamped
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from nav_msgs.msg import Odometry
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QDoubleValidator, QPalette
+from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtGui import QDoubleValidator, QAction, QPalette, QIcon
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -34,6 +35,7 @@ from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float32
 from vortex_msgs.action import NavigateWaypoints, ReferenceFilterWaypoint
+from vortex_utils.python_utils import euler_to_quat, quat_to_euler
 
 best_effort_qos = QoSProfile(
     reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -45,76 +47,9 @@ import random
 import time
 from queue import Queue
 
-from auv_gui.auv_internal_gui import InternalStatusWidget
-
 MOCK_INTERNAL_DATA = False
 
-# --- Quaternion to Euler angles ---
-
-
-def quaternion_to_euler(x: float, y: float, z: float, w: float) -> list[float]:
-    """Convert a quaternion to Euler angles (roll, pitch, yaw).
-
-    Args:
-        x (float): The x component of the quaternion.
-        y (float): The y component of the quaternion.
-        z (float): The z component of the quaternion.
-        w (float): The w component of the quaternion.
-
-    Returns:
-        List[float]: A list of Euler angles [roll, pitch, yaw].
-
-    """
-    # Roll (x-axis rotation)
-    sinr_cosp = 2 * (w * x + y * z)
-    cosr_cosp = 1 - 2 * (x * x + y * y)
-    roll = np.degrees(math.atan2(sinr_cosp, cosr_cosp))
-
-    # Pitch (y-axis rotation)
-    sinp = 2 * (w * y - z * x)
-    pitch = np.degrees(math.asin(sinp))
-
-    # Yaw (z-axis rotation)
-    siny_cosp = 2 * (w * z + x * y)
-    cosy_cosp = 1 - 2 * (y * y + z * z)
-    yaw = np.degrees(math.atan2(siny_cosp, cosy_cosp))
-
-    return [roll, pitch, yaw]
-
-
-def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> list[float]:
-    """Convert Euler angles to a quaternion.
-
-    Args:
-        roll (float): The roll angle in degrees.
-        pitch (float): The pitch angle in degrees.
-        yaw (float): The yaw angle in degrees.
-
-    Returns:
-        List[float]: A list of quaternion components [x, y, z, w].
-
-    """
-    roll = np.radians(roll)
-    pitch = np.radians(pitch)
-    yaw = np.radians(yaw)
-
-    cy = math.cos(yaw * 0.5)
-    sy = math.sin(yaw * 0.5)
-    cp = math.cos(pitch * 0.5)
-    sp = math.sin(pitch * 0.5)
-    cr = math.cos(roll * 0.5)
-    sr = math.sin(roll * 0.5)
-
-    w = cy * cp * cr + sy * sp * sr
-    x = cy * cp * sr - sy * sp * cr
-    y = sy * cp * sr + cy * sp * cr
-    z = sy * cp * cr - cy * sp * sr
-
-    return [x, y, z, w]
-
-
 # --- GUI Node ---
-
 
 class GuiNode(Node):
     """ROS2 Node that subscribes to odometry data and stores x, y positions."""
@@ -296,7 +231,7 @@ class GuiNode(Node):
             pose_stamped.pose.position.y = y_val
             pose_stamped.pose.position.z = z_val
 
-            quat = euler_to_quaternion(roll_val, pitch_val, yaw_val)
+            quat = euler_to_quat(roll_val, pitch_val, yaw_val)
             pose_stamped.pose.orientation.x = quat[0]
             pose_stamped.pose.orientation.y = quat[1]
             pose_stamped.pose.orientation.z = quat[2]
@@ -353,7 +288,7 @@ class GuiNode(Node):
             pose_stamped.pose.position.y = y_val
             pose_stamped.pose.position.z = z_val
 
-            quat = euler_to_quaternion(roll_val, pitch_val, yaw_val)
+            quat = euler_to_quat(roll_val, pitch_val, yaw_val)
             pose_stamped.pose.orientation.x = quat[0]
             pose_stamped.pose.orientation.y = quat[1]
             pose_stamped.pose.orientation.z = quat[2]
@@ -457,7 +392,7 @@ class GuiNode(Node):
         x = msg.pose.pose.orientation.x
         y = msg.pose.pose.orientation.y
         z = msg.pose.pose.orientation.z
-        self.roll, self.pitch, self.yaw = quaternion_to_euler(x, y, z, w)
+        self.roll, self.pitch, self.yaw = quat_to_euler(x, y, z, w)
 
         # Limit the stored data for real-time plotting (avoid memory overflow)
         max_data_points = (
@@ -488,87 +423,6 @@ class GuiNode(Node):
         temp_timestamp = time.time()
         self.pressure.put((msg.data, temp_timestamp))
 
-
-# --- Plotting ---
-
-
-class PlotCanvas(FigureCanvas):
-    """A canvas widget for plotting odometry data using matplotlib."""
-
-    def __init__(self, gui_node: GuiNode, parent: Optional[QWidget] = None) -> None:
-        """Initialize the PlotCanvas."""
-        # Set up the 3D plot
-        self.gui_node = gui_node
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111, projection="3d")
-
-        # Initialize a red dot for the current position
-        (self.current_position_dot,) = self.ax.plot([], [], [], "ro")
-
-        super().__init__(self.fig)
-        self.setParent(parent)
-
-        # Set labels and title for the 3D plot
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
-        self.ax.set_zlabel("Z")
-        self.ax.set_title("Position")
-
-        # Initialize data lists for 3D plot
-        self.x_data: list[float] = []
-        self.y_data: list[float] = []
-        self.z_data: list[float] = []
-        (self.line,) = self.ax.plot([], [], [], "k-")
-
-    def update_plot(
-        self, x_data: list[float], y_data: list[float], z_data: list[float]
-    ) -> None:
-        """Update the 3D plot with the latest odometry data."""
-        # Convert lists to numpy arrays to ensure compatibility with the plot functions
-        x_data = np.array(x_data, dtype=float)
-        y_data = np.array(y_data, dtype=float)
-        z_data = np.array(z_data, dtype=float)
-
-        # Check if the arrays are non-empty before updating the plot
-        if len(x_data) > 0 and len(y_data) > 0 and len(z_data) > 0:
-            self.line.set_data(x_data, y_data)
-            self.line.set_3d_properties(z_data)
-
-            # Update the current position dot
-            self.current_position_dot.set_data(x_data[-1:], y_data[-1:])
-            self.current_position_dot.set_3d_properties(z_data[-1:])
-
-            # Update the limits for the 3D plot around the latest data point
-            x_latest = x_data[-1]
-            y_latest = y_data[-1]
-            z_latest = z_data[-1]
-            margin = 2.5  # Define a margin around the latest point
-
-            self.ax.set_xlim(x_latest - margin, x_latest + margin)
-            self.ax.set_ylim(y_latest - margin, y_latest + margin)
-            self.ax.set_zlim(z_latest - margin, z_latest + margin)
-
-            self.fig.canvas.draw()
-            self.fig.canvas.flush_events()
-
-        # Plot waypoints when they are received
-        if len(self.gui_node.waypoints) > 0:
-            # self.ax.cla()
-            x_coords = []
-            y_coords = []
-            z_coords = []
-            for waypoint in self.gui_node.waypoints:
-                x = waypoint.pose.position.x
-                y = waypoint.pose.position.y
-                z = -waypoint.pose.position.z
-                x_coords.append(x)
-                y_coords.append(y)
-                z_coords.append(z)
-                self.ax.plot([x], [y], [z], "bo")
-            self.ax.plot(x_coords, y_coords, z_coords, "b-")
-            self.gui_node.waypoints = []
-
-
 def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
     """Run the ROS2 node in a separate thread using a MultiThreadedExecutor."""
     rclpy.spin(ros_node, executor)
@@ -578,6 +432,8 @@ def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
     # Initialize QApplication before creating any widgets
     app = QApplication(sys.argv)
+    package_share_directory = get_package_share_directory("auv_gui")
+    app.setWindowIcon(QIcon(package_share_directory + "/resources/vortex_logo.png"))
     app.setStyle("Fusion")
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.darkRed)
@@ -592,12 +448,10 @@ def main(args: Optional[list[str]] = None) -> None:
     palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
     app.setPalette(palette)
 
-    # Initialize ROS2 after QApplication
     rclpy.init(args=args)
     ros_node = GuiNode()
     executor = MultiThreadedExecutor()
 
-    # Run ROS in a separate thread
     ros_thread = Thread(target=run_ros_node, args=(ros_node, executor), daemon=True)
     ros_thread.start()
 
@@ -614,8 +468,9 @@ def main(args: Optional[list[str]] = None) -> None:
     mission_position_layout = QGridLayout(mission_position_widget)
 
     # --- Position Section ---
-    plot_canvas = PlotCanvas(ros_node, mission_position_widget)
-    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 4)
+    plot_canvas = OpenGLPlotWidget(ros_node, mission_position_widget)
+    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 3)  # Spanning 2 columns
+    mission_position_layout.setRowStretch(0, 5)
 
     current_pos = QLabel(parent=mission_position_widget)
     current_pos.setText("Current Position: Not Available")
@@ -680,7 +535,7 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.cancel_button.clicked.connect(ros_node.cancel_goal)
 
     ros_node.clear_plot_button = QPushButton("Clear Plot")
-    ros_node.clear_plot_button.clicked.connect(plot_canvas.ax.clear)
+    ros_node.clear_plot_button.clicked.connect(plot_canvas.clear_plot)
 
     buttons_layout.addWidget(ros_node.add_button)
     buttons_layout.addWidget(ros_node.send_button_ref)
@@ -752,11 +607,23 @@ def main(args: Optional[list[str]] = None) -> None:
     timer.timeout.connect(update_gui)
     timer.start(100)
 
-    app.exec()
+    def signal_handler(sig, frame):
+        print("\n[INFO] Shutting down gracefully...")
+        ros_node.destroy_node()  # Stop ROS2 node
+        rclpy.shutdown()        # Shutdown ROS2
+        app.quit()              # Close the Qt application
+        sys.exit(0)             # Exit the program
 
-    ros_node.destroy_node()
-    rclpy.shutdown()
-    sys.exit()
+    # Register the signal handler
+    signal.signal(signal.SIGINT, signal_handler)
+
+    try:
+        app.exec()  # Run the Qt application
+    finally:
+        # Ensure clean shutdown if app.exec() is interrupted
+        ros_node.destroy_node()
+        rclpy.shutdown()
+        sys.exit(0)
 
 
 if __name__ == "__main__":

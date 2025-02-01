@@ -12,7 +12,7 @@ def generate_launch_description():
 
     gui_node = Node(
         package='auv_gui',
-        executable='auv-gui',
+        executable='auv_gui_node.py',
         name='gui_node',
         output='screen',
         emulate_tty=True,

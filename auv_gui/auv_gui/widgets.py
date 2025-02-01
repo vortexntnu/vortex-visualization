@@ -1,19 +1,11 @@
 from PyQt6.QtWidgets import (
-    QApplication,
-    QGridLayout,
-    QHBoxLayout,
     QLabel,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
-    QMainWindow,
-    QPushButton,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
-
-import time
+import pyqtgraph as pg
+import pyqtgraph.opengl as gl
+import numpy as np
 from queue import Queue
 from pglive.kwargs import Axis
 from pglive.sources.data_connector import DataConnector
@@ -21,6 +13,51 @@ from pglive.sources.live_axis import LiveAxis
 from pglive.sources.live_plot import LiveLinePlot
 from pglive.sources.live_plot_widget import LivePlotWidget
 
+class OpenGLPlotWidget(QWidget):
+    def __init__(self, gui_node, parent=None):
+        """Initialize the OpenGL 3D plot."""
+        super().__init__(parent)
+        self.gui_node = gui_node
+
+        # Create the OpenGL widget
+        self.view = gl.GLViewWidget()
+        self.view.setCameraPosition(distance=10)  # Adjust zoom level
+
+        # Create a grid for reference
+        self.grid = gl.GLGridItem()
+        self.grid.setSize(20, 20, 1)
+        self.view.addItem(self.grid)
+
+        # Initialize plot objects
+        self.trajectory = gl.GLLinePlotItem(color=(0, 0, 255, 255), width=2)  # Blue line
+        self.current_position_dot = gl.GLScatterPlotItem(
+            pos=np.array([[0, 0, 0]]), color=(1, 0, 0, 1), size=5  # Red dot
+        )
+
+        self.view.addItem(self.trajectory)
+        self.view.addItem(self.current_position_dot)
+
+        # Layout
+        layout = pg.QtWidgets.QVBoxLayout()
+        layout.addWidget(self.view)
+        self.setLayout(layout)
+
+    def update_plot(self, x_data, y_data, z_data):
+        """Update the 3D plot with new trajectory data."""
+        if len(x_data) > 1:
+            # Convert lists to NumPy array
+            points = np.vstack((x_data, y_data, z_data)).T
+            self.trajectory.setData(pos=points)
+
+            # Update current position marker
+            self.current_position_dot.setData(pos=points[-1:])
+
+    def clear_plot(self):
+        """Clear the 3D plot by resetting the trajectory and position dot."""
+        self.trajectory.setData(pos=np.empty((0, 3), dtype=np.float32))
+        self.gui_node.xpos_data.clear()
+        self.gui_node.ypos_data.clear()
+        self.gui_node.zpos_data.clear()
 
 class AnalogWidget:
     def __init__(self, name: str, unit: str, color: str):
