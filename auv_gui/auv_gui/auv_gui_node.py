@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QGridLayout,
+    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -72,28 +73,16 @@ class GuiNode(Node):
         self.declare_parameter("history_length", 30)
         self.declare_parameter("mock_data", False)
 
-        pose_topic = (
-            self.get_parameter("pose_topic").value
-        )
-        twist_topic = (
-            self.get_parameter("twist_topic").value
-        )
-        current_topic = (
-            self.get_parameter("current_topic").value
-        )
-        voltage_topic = (
-            self.get_parameter("voltage_topic").value
-        )
-        temperature_topic = (
-            self.get_parameter("temperature_topic").value
-        )
-        pressure_topic = (
-            self.get_parameter("pressure_topic").value
-        )
+        pose_topic = self.get_parameter("pose_topic").value
+        twist_topic = self.get_parameter("twist_topic").value
+        current_topic = self.get_parameter("current_topic").value
+        voltage_topic = self.get_parameter("voltage_topic").value
+        temperature_topic = self.get_parameter("temperature_topic").value
+        pressure_topic = self.get_parameter("pressure_topic").value
 
         self.mock_data = self.get_parameter("mock_data").value
 
-        # Subscriber to the /orca/odom topic
+        # Subscriber to the odometry topics
         self.pose_subscription = self.create_subscription(
             PoseWithCovarianceStamped, pose_topic, self.twist_callback, qos_profile=best_effort_qos
         )
@@ -133,10 +122,10 @@ class GuiNode(Node):
         )
 
         # Variables for internal status
-        self.current = Queue()
-        self.voltage = Queue()
-        self.temperature = Queue()
-        self.pressure = Queue()
+        self.current = Queue(maxsize=10)
+        self.voltage = Queue(maxsize=10)
+        self.temperature = Queue(maxsize=10)
+        self.pressure = Queue(maxsize=10)
 
         # --- Waypoint stuff ---
 
@@ -322,7 +311,6 @@ class GuiNode(Node):
     def update_button_states(self):
         """Enable/Disable buttons based on waypoint selection."""
         selected_count = len(self.waypoint_list.selectedItems())
-
         self.send_button_ref.setEnabled(selected_count == 1)
 
     def cancel_goal(self) -> None:
@@ -408,7 +396,7 @@ class GuiNode(Node):
         max_data_points = (
             self.get_parameter("history_length").get_parameter_value().integer_value
         )
-        if len(self.x_data) > max_data_points:
+        if len(self.xpos_data) > max_data_points:
             self.xpos_data.pop(0)
             self.ypos_data.pop(0)
             self.zpos_data.pop(0)
@@ -482,13 +470,19 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # --- Position Section ---
     plot_canvas = OpenGLPlotWidget(ros_node, mission_position_widget)
-    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 3)  # Spanning 2 columns
+    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 3)
     mission_position_layout.setRowStretch(0, 5)
     mission_position_layout.setColumnStretch(0, 5)
 
-    current_pos = QLabel(parent=mission_position_widget)
-    current_pos.setText("Current Position: Not Available")
-    mission_position_layout.addWidget(current_pos, 0, 4)
+    # Create the labels for current position and internal status
+    current_pos = QLabel("Current Position: Not Available")
+    internal_status_label = QLabel("Internal Status: Not Available")
+
+    # Group them in a horizontal layout
+    status_layout = QVBoxLayout()
+    status_layout.addWidget(current_pos)
+    status_layout.addWidget(internal_status_label)
+    mission_position_layout.addLayout(status_layout, 0, 4)
 
     # --- Mission Section ---
     inputs_layout = QHBoxLayout()
@@ -594,29 +588,49 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # Use a QTimer to update plot, current position, and internal status in the main thread
     def update_gui() -> None:
+        # Update mock data first if enabled
+        if ros_node.mock_data:
+            ros_node.current.put((1.0 + (random.random() * 0.06), time.time()))
+            ros_node.voltage.put((12.0 + (random.random() * 0.07), time.time()))
+            ros_node.temperature.put((25.0 + (random.random() * 0.15), time.time()))
+            ros_node.pressure.put((1013.25 + (random.random()), time.time()))
+    
         plot_canvas.update_plot(
             ros_node.xpos_data, ros_node.ypos_data, ros_node.zpos_data
         )
         if len(ros_node.xpos_data) > 0 and ros_node.roll is not None:
-            position_text = f"Current Position:\nX: {ros_node.xpos_data[-1]:.2f}\nY: {ros_node.ypos_data[-1]:.2f}\nZ: {ros_node.zpos_data[-1]:.2f}"
-            orientation_text = f"Current Orientation:\nRoll: {ros_node.roll:.2f}\nPitch: {ros_node.pitch:.2f}\nYaw: {ros_node.yaw:.2f}"
-            current_pos.setText(position_text + "\n\n\n" + orientation_text)
-
-        # mock data
-        if ros_node.mock_data:
-            ros_node.current.put((1.0 + (-0.15 + random.random() * 0.3), time.time()))
-            ros_node.voltage.put((12.0 + (-0.2 + random.random() * 0.4), time.time()))
-            ros_node.temperature.put((25.0 + (-0.5 + random.random()), time.time()))
-            ros_node.pressure.put(
-                (1013.25 + (-60 + random.random() * 120), time.time())
+            position_text = (
+                f"Current Position:\nX: {ros_node.xpos_data[-1]:.2f}\n"
+                f"Y: {ros_node.ypos_data[-1]:.2f}\n"
+                f"Z: {ros_node.zpos_data[-1]:.2f}"
             )
+            orientation_text = (
+                f"Current Orientation:\nRoll: {ros_node.roll:.2f}\n"
+                f"Pitch: {ros_node.pitch:.2f}\n"
+                f"Yaw: {ros_node.yaw:.2f}"
+            )
+            current_pos.setText(position_text + "\n\n" + orientation_text)
 
-        # Update internal status
+        try:
+            current_val = ros_node.current.queue[-1][0]
+            voltage_val = ros_node.voltage.queue[-1][0]
+            temperature_val = ros_node.temperature.queue[-1][0]
+            pressure_val = ros_node.pressure.queue[-1][0]
+            status_text = (
+                f"Internal Status:\n"
+                f"Current: {current_val:.2f} A\n"
+                f"Voltage: {voltage_val:.2f} V\n"
+                f"Temperature: {temperature_val:.2f} °C\n"
+                f"Pressure: {pressure_val:.2f} Pa"
+            )
+        except IndexError:
+            status_text = "Internal Status: Not Available"
+        internal_status_label.setText(status_text)
+
         internal_status.update(
             ros_node.current, ros_node.voltage, ros_node.temperature, ros_node.pressure
         )
 
-    # Set up the timer to call update_gui every 100ms
     timer = QTimer()
     timer.timeout.connect(update_gui)
     timer.start(100)
