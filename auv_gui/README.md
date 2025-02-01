@@ -1,5 +1,5 @@
 ## AUV GUI
-This package contains a general user interface (GUI) made for an AUV. Has both a mission and internal status interface.
+This package contains a graphical user interface (GUI) made for an AUV. Has both a mission and internal status interface.
 
 Can be launched using the ROS 2 launch file:
 ```bash
