@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import math
 import sys
 import signal
 from threading import Thread
@@ -8,10 +7,6 @@ from typing import Optional
 from auv_gui.widgets import OpenGLPlotWidget, InternalStatusWidget
 from ament_index_python.packages import get_package_share_directory
 
-import numpy as np
-import rclpy
-from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import Odometry
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QDoubleValidator, QAction, QPalette, QIcon
 from PyQt6.QtWidgets import (
@@ -29,6 +24,8 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QWidget,
 )
+import rclpy
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TwistWithCovarianceStamped
 from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -66,30 +63,43 @@ class GuiNode(Node):
         )
 
         # ROS2 parameters
-        self.declare_parameter("odom_topic", "/orca/odom")
+        self.declare_parameter("pose_topic", "/dvl/pose")
+        self.declare_parameter("twist_topic", "/dvl/twist")
         self.declare_parameter("current_topic", "/auv/power_sense_module/current")
         self.declare_parameter("voltage_topic", "/auv/power_sense_module/voltage")
         self.declare_parameter("temperature_topic", "/auv/temperature")
         self.declare_parameter("pressure_topic", "/auv/pressure")
         self.declare_parameter("history_length", 30)
+        self.declare_parameter("mock_data", False)
 
-        odom_topic = self.get_parameter("odom_topic").get_parameter_value().string_value
+        pose_topic = (
+            self.get_parameter("pose_topic").value
+        )
+        twist_topic = (
+            self.get_parameter("twist_topic").value
+        )
         current_topic = (
-            self.get_parameter("current_topic").get_parameter_value().string_value
+            self.get_parameter("current_topic").value
         )
         voltage_topic = (
-            self.get_parameter("voltage_topic").get_parameter_value().string_value
+            self.get_parameter("voltage_topic").value
         )
         temperature_topic = (
-            self.get_parameter("temperature_topic").get_parameter_value().string_value
+            self.get_parameter("temperature_topic").value
         )
         pressure_topic = (
-            self.get_parameter("pressure_topic").get_parameter_value().string_value
+            self.get_parameter("pressure_topic").value
         )
 
+        self.mock_data = self.get_parameter("mock_data").value
+
         # Subscriber to the /orca/odom topic
-        self.subscription = self.create_subscription(
-            Odometry, odom_topic, self.odom_callback, qos_profile=best_effort_qos
+        self.pose_subscription = self.create_subscription(
+            PoseWithCovarianceStamped, pose_topic, self.twist_callback, qos_profile=best_effort_qos
+        )
+
+        self.twist_subscription = self.create_subscription(
+            TwistWithCovarianceStamped, twist_topic, self.twist_callback, qos_profile=best_effort_qos
         )
 
         self.waypoints = []
@@ -104,9 +114,9 @@ class GuiNode(Node):
         self.y_data: list[float] = []  # y component of the quaternion
         self.z_data: list[float] = []  # z component of the quaternion
 
-        self.roll: Optional[float] = None
-        self.pitch: Optional[float] = None
-        self.yaw: Optional[float] = None
+        self.roll: float = None
+        self.pitch: float = None
+        self.yaw: float = None
 
         # Subscribe to internal status topics
         self.current_subscriber = self.create_subscription(
@@ -377,7 +387,7 @@ class GuiNode(Node):
         result = future.result().result.success
         self.get_logger().info(f"Mission completed successfully: {result}")
 
-    def odom_callback(self, msg: Odometry) -> None:
+    def pose_callback(self, msg: PoseWithCovarianceStamped) -> None:
         """Callback function that is triggered when an odometry message is received."""
         # Extract x, y, z positions from the odometry message
         x = msg.pose.pose.position.x
@@ -402,6 +412,9 @@ class GuiNode(Node):
             self.xpos_data.pop(0)
             self.ypos_data.pop(0)
             self.zpos_data.pop(0)
+
+    def twist_callback(self, msg: TwistWithCovarianceStamped) -> None:
+        pass
 
     def current_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a current message is received."""
@@ -471,6 +484,7 @@ def main(args: Optional[list[str]] = None) -> None:
     plot_canvas = OpenGLPlotWidget(ros_node, mission_position_widget)
     mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 3)  # Spanning 2 columns
     mission_position_layout.setRowStretch(0, 5)
+    mission_position_layout.setColumnStretch(0, 5)
 
     current_pos = QLabel(parent=mission_position_widget)
     current_pos.setText("Current Position: Not Available")
@@ -589,7 +603,7 @@ def main(args: Optional[list[str]] = None) -> None:
             current_pos.setText(position_text + "\n\n\n" + orientation_text)
 
         # mock data
-        if MOCK_INTERNAL_DATA:
+        if ros_node.mock_data:
             ros_node.current.put((1.0 + (-0.15 + random.random() * 0.3), time.time()))
             ros_node.voltage.put((12.0 + (-0.2 + random.random() * 0.4), time.time()))
             ros_node.temperature.put((25.0 + (-0.5 + random.random()), time.time()))
@@ -609,18 +623,16 @@ def main(args: Optional[list[str]] = None) -> None:
 
     def signal_handler(sig, frame):
         print("\n[INFO] Shutting down gracefully...")
-        ros_node.destroy_node()  # Stop ROS2 node
-        rclpy.shutdown()        # Shutdown ROS2
-        app.quit()              # Close the Qt application
-        sys.exit(0)             # Exit the program
+        ros_node.destroy_node()
+        rclpy.shutdown()
+        app.quit()
+        sys.exit(0)
 
-    # Register the signal handler
     signal.signal(signal.SIGINT, signal_handler)
 
     try:
-        app.exec()  # Run the Qt application
+        app.exec()
     finally:
-        # Ensure clean shutdown if app.exec() is interrupted
         ros_node.destroy_node()
         rclpy.shutdown()
         sys.exit(0)

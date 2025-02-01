@@ -1,7 +1,8 @@
 /**:
   ros__parameters:
     gui_auv:
-      odom_topic: "/nucleus/odom"
+      pose_topic: "/dvl/pose"
+      twist_topic: "/dvl/twist"
       current_topic: "/auv/power_sense_module/current"
       voltage_topic: "/auv/power_sense_module/voltage"
       temperature_topic: "/auv/temperature"
