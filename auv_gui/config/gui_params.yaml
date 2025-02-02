@@ -7,4 +7,4 @@
       voltage_topic: "/auv/power_sense_module/voltage"
       temperature_topic: "/auv/temperature"
       pressure_topic: "/auv/pressure"
-      history_length: 30 # seconds
+      history_length: 3000

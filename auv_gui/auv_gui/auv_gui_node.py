@@ -45,8 +45,6 @@ import random
 import time
 from queue import Queue
 
-MOCK_INTERNAL_DATA = False
-
 # --- GUI Node ---
 
 class GuiNode(Node):
@@ -84,7 +82,7 @@ class GuiNode(Node):
 
         # Subscriber to the odometry topics
         self.pose_subscription = self.create_subscription(
-            PoseWithCovarianceStamped, pose_topic, self.twist_callback, qos_profile=best_effort_qos
+            PoseWithCovarianceStamped, pose_topic, self.pose_callback, qos_profile=best_effort_qos
         )
 
         self.twist_subscription = self.create_subscription(
@@ -396,10 +394,10 @@ class GuiNode(Node):
         max_data_points = (
             self.get_parameter("history_length").get_parameter_value().integer_value
         )
-        if len(self.xpos_data) > max_data_points:
-            self.xpos_data.pop(0)
-            self.ypos_data.pop(0)
-            self.zpos_data.pop(0)
+        # if len(self.xpos_data) > max_data_points:
+        #     self.xpos_data.pop(0)
+        #     self.ypos_data.pop(0)
+        #     self.zpos_data.pop(0)
 
     def twist_callback(self, msg: TwistWithCovarianceStamped) -> None:
         pass

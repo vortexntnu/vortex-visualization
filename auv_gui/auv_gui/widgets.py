@@ -8,6 +8,7 @@ import pyqtgraph.opengl as gl
 import numpy as np
 from queue import Queue
 from pglive.kwargs import Axis
+from PyQt6.QtGui import QVector3D
 from pglive.sources.data_connector import DataConnector
 from pglive.sources.live_axis import LiveAxis
 from pglive.sources.live_plot import LiveLinePlot
@@ -19,16 +20,15 @@ class OpenGLPlotWidget(QWidget):
         super().__init__(parent)
         self.gui_node = gui_node
 
-        # Create the OpenGL widget
-        self.view = gl.GLViewWidget()
-        self.view.setCameraPosition(distance=10)  # Adjust zoom level
+        self.follow_mode = False
 
-        # Create a grid for reference
+        self.view = gl.GLViewWidget()
+        self.view.setCameraPosition(distance=10)
+
         self.grid = gl.GLGridItem()
         self.grid.setSize(20, 20, 1)
         self.view.addItem(self.grid)
 
-        # Initialize plot objects
         self.trajectory = gl.GLLinePlotItem(color=(0, 0, 255, 255), width=2)  # Blue line
         self.current_position_dot = gl.GLScatterPlotItem(
             pos=np.array([[0, 0, 0]]), color=(1, 0, 0, 1), size=5  # Red dot
@@ -37,20 +37,28 @@ class OpenGLPlotWidget(QWidget):
         self.view.addItem(self.trajectory)
         self.view.addItem(self.current_position_dot)
 
-        # Layout
+        follow_button = pg.QtWidgets.QPushButton("Toggle Follow Mode")
+        follow_button.clicked.connect(self.toggle_follow_mode)
+
         layout = pg.QtWidgets.QVBoxLayout()
+        layout.addWidget(follow_button)
         layout.addWidget(self.view)
         self.setLayout(layout)
 
     def update_plot(self, x_data, y_data, z_data):
         """Update the 3D plot with new trajectory data."""
         if len(x_data) > 1:
-            # Convert lists to NumPy array
             points = np.vstack((x_data, y_data, z_data)).T
             self.trajectory.setData(pos=points)
 
-            # Update current position marker
             self.current_position_dot.setData(pos=points[-1:])
+
+            if self.follow_mode:
+                vec = QVector3D()
+                vec.setX(points[-1][0])
+                vec.setY(points[-1][1])
+                vec.setZ(points[-1][2])
+                self.view.setCameraPosition(pos=vec)
 
     def clear_plot(self):
         """Clear the 3D plot by resetting the trajectory and position dot."""
@@ -58,6 +66,10 @@ class OpenGLPlotWidget(QWidget):
         self.gui_node.xpos_data.clear()
         self.gui_node.ypos_data.clear()
         self.gui_node.zpos_data.clear()
+
+    def toggle_follow_mode(self):
+        """Toggle follow mode on or off."""
+        self.follow_mode = not self.follow_mode
 
 class AnalogWidget:
     def __init__(self, name: str, unit: str, color: str):
