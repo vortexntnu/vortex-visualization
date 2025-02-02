@@ -2,22 +2,22 @@ declare module "parameter_types" {
 
     export type NodeConfig = {
         name: string;
-        parameters?: ParameterProperties[]; 
+        parameters?: ParameterProperties[];
 
     }
-    
+
     export type ParameterProperties = {
         name: string;
         dropdownOptions?: (number | string)[];
         min_value?: number
         max_value?: number
         step?: number
-        
+
     }
 
     export type Parameter = {
         name: string;
-        value: ParameterValue;       
+        value: ParameterValue;
     }
 
 
@@ -34,7 +34,7 @@ declare module "parameter_types" {
         string_array_value: string[];
     }
 
-    export type SetSrvParam = { 
+    export type SetSrvParam = {
         name?: string;
         value?: {
             type: number;

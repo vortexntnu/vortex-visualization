@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 
-import sys
 import signal
+import sys
 from threading import Thread
 from typing import Optional
-from auv_gui.widgets import OpenGLPlotWidget, InternalStatusWidget
-from ament_index_python.packages import get_package_share_directory
 
-from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QDoubleValidator, QAction, QPalette, QIcon
+import rclpy
+from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import (
+    PoseStamped,
+    PoseWithCovarianceStamped,
+    TwistWithCovarianceStamped,
+)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QAction, QDoubleValidator, QIcon, QPalette
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QGridLayout,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -23,10 +27,9 @@ from PyQt6.QtWidgets import (
     QMenu,
     QPushButton,
     QTabWidget,
+    QVBoxLayout,
     QWidget,
 )
-import rclpy
-from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TwistWithCovarianceStamped
 from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -34,6 +37,8 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float32
 from vortex_msgs.action import NavigateWaypoints, ReferenceFilterWaypoint
 from vortex_utils.python_utils import euler_to_quat, quat_to_euler
+
+from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
 
 best_effort_qos = QoSProfile(
     reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -46,6 +51,7 @@ import time
 from queue import Queue
 
 # --- GUI Node ---
+
 
 class GuiNode(Node):
     """ROS2 Node that subscribes to odometry data and stores x, y positions."""
@@ -82,11 +88,17 @@ class GuiNode(Node):
 
         # Subscriber to the odometry topics
         self.pose_subscription = self.create_subscription(
-            PoseWithCovarianceStamped, pose_topic, self.pose_callback, qos_profile=best_effort_qos
+            PoseWithCovarianceStamped,
+            pose_topic,
+            self.pose_callback,
+            qos_profile=best_effort_qos,
         )
 
         self.twist_subscription = self.create_subscription(
-            TwistWithCovarianceStamped, twist_topic, self.twist_callback, qos_profile=best_effort_qos
+            TwistWithCovarianceStamped,
+            twist_topic,
+            self.twist_callback,
+            qos_profile=best_effort_qos,
         )
 
         self.waypoints = []
@@ -391,9 +403,9 @@ class GuiNode(Node):
         self.roll, self.pitch, self.yaw = quat_to_euler(x, y, z, w)
 
         # Limit the stored data for real-time plotting (avoid memory overflow)
-        max_data_points = (
-            self.get_parameter("history_length").get_parameter_value().integer_value
-        )
+        # max_data_points = (
+        #     self.get_parameter("history_length").get_parameter_value().integer_value
+        # )
         # if len(self.xpos_data) > max_data_points:
         #     self.xpos_data.pop(0)
         #     self.ypos_data.pop(0)
@@ -421,6 +433,7 @@ class GuiNode(Node):
         """Callback function that is triggered when a pressure message is received."""
         temp_timestamp = time.time()
         self.pressure.put((msg.data, temp_timestamp))
+
 
 def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
     """Run the ROS2 node in a separate thread using a MultiThreadedExecutor."""
@@ -474,7 +487,9 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # Create the labels for current position and internal status
     current_pos = QLabel("Current Position: Not Available")
+    current_pos.setStyleSheet("font-size: 30px;")
     internal_status_label = QLabel("Internal Status: Not Available")
+    internal_status_label.setStyleSheet("font-size: 30px;")
 
     # Group them in a horizontal layout
     status_layout = QVBoxLayout()
@@ -592,7 +607,7 @@ def main(args: Optional[list[str]] = None) -> None:
             ros_node.voltage.put((12.0 + (random.random() * 0.07), time.time()))
             ros_node.temperature.put((25.0 + (random.random() * 0.15), time.time()))
             ros_node.pressure.put((1013.25 + (random.random()), time.time()))
-    
+
         plot_canvas.update_plot(
             ros_node.xpos_data, ros_node.ypos_data, ros_node.zpos_data
         )

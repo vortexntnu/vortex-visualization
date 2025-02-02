@@ -1,18 +1,20 @@
+from queue import Queue
+
+import numpy as np
+import pyqtgraph as pg
+import pyqtgraph.opengl as gl
+from pglive.kwargs import Axis
+from pglive.sources.data_connector import DataConnector
+from pglive.sources.live_axis import LiveAxis
+from pglive.sources.live_plot import LiveLinePlot
+from pglive.sources.live_plot_widget import LivePlotWidget
+from PyQt6.QtGui import QVector3D
 from PyQt6.QtWidgets import (
     QLabel,
     QVBoxLayout,
     QWidget,
 )
-import pyqtgraph as pg
-import pyqtgraph.opengl as gl
-import numpy as np
-from queue import Queue
-from pglive.kwargs import Axis
-from PyQt6.QtGui import QVector3D
-from pglive.sources.data_connector import DataConnector
-from pglive.sources.live_axis import LiveAxis
-from pglive.sources.live_plot import LiveLinePlot
-from pglive.sources.live_plot_widget import LivePlotWidget
+
 
 class OpenGLPlotWidget(QWidget):
     def __init__(self, gui_node, parent=None):
@@ -29,9 +31,13 @@ class OpenGLPlotWidget(QWidget):
         self.grid.setSize(20, 20, 1)
         self.view.addItem(self.grid)
 
-        self.trajectory = gl.GLLinePlotItem(color=(0, 0, 255, 255), width=2)  # Blue line
+        self.trajectory = gl.GLLinePlotItem(
+            color=(0, 0, 255, 255), width=2
+        )  # Blue line
         self.current_position_dot = gl.GLScatterPlotItem(
-            pos=np.array([[0, 0, 0]]), color=(1, 0, 0, 1), size=5  # Red dot
+            pos=np.array([[0, 0, 0]]),
+            color=(1, 0, 0, 1),
+            size=5,  # Red dot
         )
 
         self.view.addItem(self.trajectory)
@@ -70,6 +76,7 @@ class OpenGLPlotWidget(QWidget):
     def toggle_follow_mode(self):
         """Toggle follow mode on or off."""
         self.follow_mode = not self.follow_mode
+
 
 class AnalogWidget:
     def __init__(self, name: str, unit: str, color: str):

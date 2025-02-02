@@ -12,7 +12,7 @@ let node: NodeConfig;
 let paramNameList: string[];
 let paramValList: ParameterValue[];
 
-// input name of node along with optinal properties of parameters (include '/' before node name to be compatible with service calls)
+// input name of node along with optional properties of parameters (include '/' before node name to be compatible with service calls)
 const nodeConfigListInit: NodeConfig[] = [
   {
     name: "/pcl_detector_node",
@@ -59,7 +59,7 @@ const nodeConfigListInit: NodeConfig[] = [
 
 
 function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): JSX.Element {
-  
+
 
   const [renderDone, setRenderDone] = useState<(() => void) | undefined>();
 
@@ -75,9 +75,9 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
 
 
   useLayoutEffect( () => {
-    
-    context.onRender = (renderState: RenderState, done) => { 
-      setRenderDone(() => done); 
+
+    context.onRender = (renderState: RenderState, done) => {
+      setRenderDone(() => done);
       updateNodeList();
 
 
@@ -92,14 +92,14 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
       }
     };
 
- 
+
     //If colorScheme changes, context.onRender() will change styling to match new color scheme
     context.watch("colorScheme");
 
   }, []);
 
   // invoke the done callback once the render is complete
-  useEffect(() => {  
+  useEffect(() => {
     renderDone?.();
   }, [renderDone]);
 
@@ -118,8 +118,8 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
   }
 
   /**
-   * determines if a string[] contains exlusively booleans
-   * @param strArr string[] to check  
+   * determines if a string[] contains exclusively booleans
+   * @param strArr string[] to check
    * @returns true if strArr only contains booleans, false otherwise
    */
   const isBooleanArr = (strArr: string[]) => {
@@ -156,14 +156,14 @@ function ParameterSliderPanel({ context }: { context: PanelExtensionContext }): 
   }
 
 /**
-//    * Updates the list of nodes upon initialization of the panel based on the content 
+//    * Updates the list of nodes upon initialization of the panel based on the content
 //    */
 const updateNodeList = () => {
-  setStatus("retreiving nodes...")
+  setStatus("retrieving nodes...")
   // context.callService?.("/rosapi/nodes", {})
-  // .then((_values: unknown) =>{ 
+  // .then((_values: unknown) =>{
     setNodeList(nodeConfigListInit);
-    setStatus("nodes retreived");  
+    setStatus("nodes retrieved");
   }
 
 /**
@@ -182,16 +182,16 @@ const updateParamList = () =>{
       for (let i = 0; i < paramNameList.length; i++) {
         tempList.push({name: paramNameList[i]!, value: paramValList[i]!});
       }
-      if(tempList.length > 0) 
+      if(tempList.length > 0)
         setParamList(tempList);
 
       if(paramNameList !== undefined) {
         setSrvParamList(new Array(paramList?.length));
       }
     })
-    .catch(() => {setStatus("error, failed to retreive parameter values")});
+    .catch(() => {setStatus("error, failed to retrieve parameter values")});
   })
-  .catch(() => {setStatus("error, failed to retreive parameter list")});
+  .catch(() => {setStatus("error, failed to retrieve parameter list")});
 }
 
 /**
@@ -223,7 +223,7 @@ const setParam = () => {
 }
 
 /**
- * Update the list of Parameters with new values to be set 
+ * Update the list of Parameters with new values to be set
  * @param val The new value to be set
  * @param name The name of the parameter that will be set to 'val'
  */
@@ -239,25 +239,25 @@ const updateSrvParamList = (name: string, val: string) => {
     let ssp: SetSrvParam = {};
     let valStrArr: string[] = [];
     switch (paramList![idx]?.value.type!) {
-      case 1: 
-        ssp = { name: name, value: { type: 1, bool_value: stringToBoolean(val) }}; 
+      case 1:
+        ssp = { name: name, value: { type: 1, bool_value: stringToBoolean(val) }};
         break;
 
-      case 2: 
-        ssp = { name: name, value: { type: 2, integer_value: +val }}; 
+      case 2:
+        ssp = { name: name, value: { type: 2, integer_value: +val }};
         break;
 
-      case 3: 
-        ssp = { name: name, value: { type: 3, double_value: +val }}; 
+      case 3:
+        ssp = { name: name, value: { type: 3, double_value: +val }};
         break;
 
-      case 4: 
-        ssp = { name: name, value: { type: 4, string_value: val }}; 
+      case 4:
+        ssp = { name: name, value: { type: 4, string_value: val }};
         break;
 
       // TODO: Implement format for byte arrays
-      case 5: 
-        //ssp = { name: name, value: { type: 5, byte_array_value: val as unknown as number[] }}; 
+      case 5:
+        //ssp = { name: name, value: { type: 5, byte_array_value: val as unknown as number[] }};
         break;
 
       case 6:
@@ -272,7 +272,7 @@ const updateSrvParamList = (name: string, val: string) => {
         }
         break;
 
-      case 7: 
+      case 7:
       valStrArr = val.replace(" ", "").replace("[", "").replace("]", "").split(",");
         ssp = { name: name, value: { type: 7, integer_array_value: valStrArr.map(Number) }};
         break;
@@ -284,10 +284,10 @@ const updateSrvParamList = (name: string, val: string) => {
 
       case 9:
         val.replace(" ", "");
-        if(val.charAt(0) == '[' && val.charAt(val.length - 1) == ']') 
+        if(val.charAt(0) == '[' && val.charAt(val.length - 1) == ']')
           val = val.substring(1, val.length - 1);
         valStrArr = val.split(",");
-        ssp = { name: name, value: { type: 9, string_array_value: valStrArr }}; 
+        ssp = { name: name, value: { type: 9, string_array_value: valStrArr }};
         break;
 
       default: ssp = {}; break;
@@ -302,7 +302,7 @@ const updateSrvParamList = (name: string, val: string) => {
 }
 
 /**
- * Returns the properies of a parameter
+ * Returns the properties of a parameter
  * @param   param The parameter that is being checked
  * @returns The properties of the parameter
  */
@@ -335,7 +335,7 @@ const getPropertiesOfParam = (param: Parameter) => {
   return parameterProperties;
 }
 
-  
+
 /**
  * Creates a dropdown input box if param is a boolean or dropdownOptions are specified, creates a slider if param is int or double or inputbox otherwise
  * @param   param The parameter that an input box is being created for
@@ -448,10 +448,10 @@ const createInputOnlyBox = (param: Parameter) => {
    * loads parameter values from a YAML file and sets all new values
    * @param files the YAML file to be uploaded
    */
-  // const loadFile = (files: FileList | null) => { 
+  // const loadFile = (files: FileList | null) => {
   //   if(files !== null) {
   //     files[0]?.text()
-  //     .then((value: string) => {      
+  //     .then((value: string) => {
   //       value = value.replaceAll(/[^\S\r\n]/gi, "");
   //       value = value.replace(node + ":\n", "");
   //       value = value.replace("ros__parameters:\n", "");
@@ -583,7 +583,7 @@ if(colorScheme == "light") {
     borderRadius: "3px",
 
   };
-  
+
 
   inputStyle = {
 
@@ -606,7 +606,7 @@ const labelStyle = {
 }
 
 const statusStyle = {
-  fontSize: "0.8rem", 
+  fontSize: "0.8rem",
   padding: "5px",
   borderTop: "0.5px solid",
 }
@@ -630,11 +630,11 @@ footerStyle;
 
 return (
   <body>
-  <div style={{ padding: "1rem", 
-                scrollBehavior: "smooth", 
-                maxHeight:"calc(100% - 25px)", 
+  <div style={{ padding: "1rem",
+                scrollBehavior: "smooth",
+                maxHeight:"calc(100% - 25px)",
                 overflowY: "scroll",
-                fontFamily: "helvetica", 
+                fontFamily: "helvetica",
                 fontSize: "1rem",
                 }}>
     <h1>ROS2 Parameter Extension</h1>
@@ -644,12 +644,12 @@ return (
       onChange={(event) => {
         // Find the selected node in the nodeList based on its name
         const selectedNode = nodeConfigList?.find(n => n.name === event.target.value);
-      
+
         // Check if a node is found
         if (selectedNode) {
           // Update the node variable with the selectedNode
           node = selectedNode;
-      
+
           // Trigger the updateParamList function
           updateParamList();
         }
@@ -663,19 +663,19 @@ return (
     </select>
 
     <form>
-      <button 
-        style={setButtonStyle} 
-        onMouseEnter={() => setBgColor("#8f8f8f")} 
-        onMouseLeave={() => colorScheme == "dark" ? setBgColor("#4d4d4d"): setBgColor("#d6d6d6")} 
-        onClick={setParam} 
+      <button
+        style={setButtonStyle}
+        onMouseEnter={() => setBgColor("#8f8f8f")}
+        onMouseLeave={() => colorScheme == "dark" ? setBgColor("#4d4d4d"): setBgColor("#d6d6d6")}
+        onClick={setParam}
         type="reset">
           Set Parameters
       </button>
 
-      {/* <label 
-        style={loadButtonStyle} 
-        onMouseEnter={() => setLoadButtonBgColor("#8f8f8f")} 
-        onMouseLeave={() => colorScheme == "dark" ? setLoadButtonBgColor("#4d4d4d"): setLoadButtonBgColor("#d6d6d6")} 
+      {/* <label
+        style={loadButtonStyle}
+        onMouseEnter={() => setLoadButtonBgColor("#8f8f8f")}
+        onMouseLeave={() => colorScheme == "dark" ? setLoadButtonBgColor("#4d4d4d"): setLoadButtonBgColor("#d6d6d6")}
         >
         <input type="file" style={{display: "none"}} onChange={(event) => {loadFile(event.target.files)}}/>
           Load
