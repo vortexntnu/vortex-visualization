@@ -445,7 +445,6 @@ def main(args: Optional[list[str]] = None) -> None:
     # Initialize QApplication before creating any widgets
     app = QApplication(sys.argv)
     package_share_directory = get_package_share_directory("auv_gui")
-    app.setWindowIcon(QIcon(package_share_directory + "/resources/vortex_logo.png"))
     app.setStyle("Fusion")
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.darkRed)
@@ -471,6 +470,7 @@ def main(args: Optional[list[str]] = None) -> None:
     gui.setWindowTitle("Vortex GUI")
     gui.setGeometry(100, 100, 600, 400)
     gui.autoFillBackground()
+    gui.setWindowIcon(QIcon(package_share_directory + "/resources/vortex_logo.png"))
     tabs = QTabWidget()
     tabs.setTabPosition(QTabWidget.TabPosition.North)
     tabs.setMovable(True)
