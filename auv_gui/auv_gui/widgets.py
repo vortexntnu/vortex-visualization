@@ -26,7 +26,7 @@ class OpenGLPlotWidget(QWidget):
 
         self.view = gl.GLViewWidget()
         self.view.setCameraPosition(distance=10)
-        self.view.setBackgroundColor('gray')
+        self.view.setBackgroundColor("gray")
 
         self.grid = gl.GLGridItem()
         self.grid.setSize(20, 20, 1)
@@ -120,7 +120,7 @@ class InternalStatusWidget:
         self.current = AnalogWidget("Current", "A", "red")
         self.voltage = AnalogWidget("Voltage", "V", "green")
         self.temperature = AnalogWidget("Temperature", "C", "blue")
-        self.pressure = AnalogWidget("Pressure", "Pa", "yellow")
+        self.pressure = AnalogWidget("Pressure", "hPa", "yellow")
 
         for analog in [self.current, self.voltage, self.temperature, self.pressure]:
             label, chart = analog.return_widgets()

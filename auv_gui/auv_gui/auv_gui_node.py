@@ -52,6 +52,8 @@ from queue import Queue
 
 # --- GUI Node ---
 
+# TODO: add startup sound
+
 
 class GuiNode(Node):
     """ROS2 Node that subscribes to odometry data and stores x, y positions."""
@@ -634,7 +636,7 @@ def main(args: Optional[list[str]] = None) -> None:
                 f"Current: {current_val:.2f} A\n"
                 f"Voltage: {voltage_val:.2f} V\n"
                 f"Temperature: {temperature_val:.2f} °C\n"
-                f"Pressure: {pressure_val:.2f} Pa"
+                f"Pressure: {pressure_val:.2f} hPa"
             )
         except IndexError:
             status_text = "Internal Status: Not Available"
