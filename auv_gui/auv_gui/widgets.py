@@ -26,6 +26,7 @@ class OpenGLPlotWidget(QWidget):
 
         self.view = gl.GLViewWidget()
         self.view.setCameraPosition(distance=10)
+        self.view.setBackgroundColor('gray')
 
         self.grid = gl.GLGridItem()
         self.grid.setSize(20, 20, 1)
@@ -36,7 +37,7 @@ class OpenGLPlotWidget(QWidget):
         )  # Blue line
         self.current_position_dot = gl.GLScatterPlotItem(
             pos=np.array([[0, 0, 0]]),
-            color=(1, 0, 0, 1),
+            color=(255, 0, 0, 255),
             size=5,  # Red dot
         )
 
