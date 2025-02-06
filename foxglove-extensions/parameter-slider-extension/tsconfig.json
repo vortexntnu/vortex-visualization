@@ -1,16 +1,24 @@
 {
   "extends": "create-foxglove-extension/tsconfig/tsconfig.json",
 
-  "include": ["./src/**/*","./src/**/*.json",
-  "./src/**/*.ts"],
+  "include": [
+    "./src/**/*",
+    "./src/**/*.json",
+    "./src/**/*.ts"
+  ],
   "compilerOptions": {
     "baseUrl": "./src",
     "paths": {
-      "parameter_types": ["./types"]
+      "parameter_types": [
+        "./types"
+      ]
     },
     "rootDir": "./src",
     "outDir": "./dist",
-    "lib": [ "es2021","dom"],
+    "lib": [
+      "es2021",
+      "dom"
+    ],
 
     // These two settings prevent typescript from emitting .d.ts files we don't need in
     // the compiled extension.
