@@ -1,2 +1,5 @@
 PyQt6==6.7.1
 PyOpenGL==3.1.9
+pyqtgraph==0.13.7
+pglive==0.8.0
+playsound==1.3.0
