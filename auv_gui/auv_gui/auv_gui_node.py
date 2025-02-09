@@ -68,35 +68,45 @@ class GuiNode(Node):
         )
 
         # ROS2 parameters
-        self.declare_parameter("pose_topic", "/dvl/pose")
-        self.declare_parameter("twist_topic", "/dvl/twist")
-        self.declare_parameter("current_topic", "/auv/power_sense_module/current")
-        self.declare_parameter("voltage_topic", "/auv/power_sense_module/voltage")
-        self.declare_parameter("temperature_topic", "/auv/temperature")
-        self.declare_parameter("pressure_topic", "/auv/pressure")
-        self.declare_parameter("history_length", 30)
+        namespace = (
+            self.declare_parameter("topics.namespace", "orca")
+            .get_parameter_value()
+            .string_value
+        )
+
+        topic_params = [
+            "pose",
+            "twist",
+            "current",
+            "voltage",
+            "temperature",
+            "pressure",
+        ]
+
+        for param in topic_params:
+            self.declare_parameter(f"topics.{param}", "_")
+            setattr(
+                self,
+                param + "_topic",
+                namespace + self.get_parameter(f"topics.{param}").value,
+            )
+
+        print(self.__dict__)
+
         self.declare_parameter("mock_data", False)
-
-        pose_topic = self.get_parameter("pose_topic").value
-        twist_topic = self.get_parameter("twist_topic").value
-        current_topic = self.get_parameter("current_topic").value
-        voltage_topic = self.get_parameter("voltage_topic").value
-        temperature_topic = self.get_parameter("temperature_topic").value
-        pressure_topic = self.get_parameter("pressure_topic").value
-
         self.mock_data = self.get_parameter("mock_data").value
 
         # Subscriber to the odometry topics
         self.pose_subscription = self.create_subscription(
             PoseWithCovarianceStamped,
-            pose_topic,
+            self.pose_topic,
             self.pose_callback,
             qos_profile=best_effort_qos,
         )
 
         self.twist_subscription = self.create_subscription(
             TwistWithCovarianceStamped,
-            twist_topic,
+            self.twist_topic,
             self.twist_callback,
             qos_profile=best_effort_qos,
         )
@@ -119,16 +129,16 @@ class GuiNode(Node):
 
         # Subscribe to internal status topics
         self.current_subscriber = self.create_subscription(
-            Float32, current_topic, self.current_callback, 5
+            Float32, self.current_topic, self.current_callback, 5
         )
         self.voltage_subscriber = self.create_subscription(
-            Float32, voltage_topic, self.voltage_callback, 5
+            Float32, self.voltage_topic, self.voltage_callback, 5
         )
         self.temperature_subscriber = self.create_subscription(
-            Float32, temperature_topic, self.temperature_callback, 5
+            Float32, self.temperature_topic, self.temperature_callback, 5
         )
         self.pressure_subscriber = self.create_subscription(
-            Float32, pressure_topic, self.pressure_callback, 5
+            Float32, self.pressure_topic, self.pressure_callback, 5
         )
 
         # Variables for internal status
@@ -212,9 +222,6 @@ class GuiNode(Node):
 
     def update_ordered_waypoints(self):
         """Update internal order of waypoints based on the reordered list."""
-        ordered_items = [
-            self.ordered_list.item(i).text() for i in range(self.ordered_list.count())
-        ]
 
     def get_waypoints(self):
         """Retrieve waypoints from the selected items in the list."""
@@ -610,7 +617,7 @@ def main(args: Optional[list[str]] = None) -> None:
         plot_canvas.update_plot(
             ros_node.xpos_data, ros_node.ypos_data, ros_node.zpos_data
         )
-        
+
         if len(ros_node.xpos_data) > 0 and ros_node.roll is not None:
             position_text = (
                 f"<b>Current Position:</b><br>X: {ros_node.xpos_data[-1]:.2f}<br>"

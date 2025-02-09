@@ -12,6 +12,10 @@ def generate_launch_description():
         get_package_share_directory("auv_gui"), "config", "gui_params.yaml"
     )
 
+    orca_params = path.join(
+        get_package_share_directory("auv_setup"), "config", "robots", "orca.yaml"
+    )
+
     mock_data_arg = DeclareLaunchArgument(
         "mock_data",
         default_value="false",
@@ -22,10 +26,14 @@ def generate_launch_description():
     gui_node = Node(
         package="auv_gui",
         executable="auv_gui_node.py",
-        name="gui_node",
+        name="auv_gui_node",
         output="screen",
         emulate_tty=True,
-        parameters=[config, {"mock_data": LaunchConfiguration("mock_data")}],
+        parameters=[
+            config,
+            {"mock_data": LaunchConfiguration("mock_data")},
+            orca_params,
+        ],
     )
 
     return LaunchDescription([mock_data_arg, gui_node])

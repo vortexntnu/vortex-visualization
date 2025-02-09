@@ -1,10 +1,4 @@
-/**:
+auv_gui_node:
   ros__parameters:
     gui_auv:
-      pose_topic: "/dvl/pose"
-      twist_topic: "/dvl/twist"
-      current_topic: "/auv/power_sense_module/current"
-      voltage_topic: "/auv/power_sense_module/voltage"
-      temperature_topic: "/auv/temperature"
-      pressure_topic: "/auv/pressure"
       history_length: 3000
