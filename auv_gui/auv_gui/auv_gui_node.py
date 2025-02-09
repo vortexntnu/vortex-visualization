@@ -52,8 +52,6 @@ from queue import Queue
 
 # --- GUI Node ---
 
-# TODO: add startup sound
-
 
 class GuiNode(Node):
     """ROS2 Node that subscribes to odometry data and stores x, y positions."""
@@ -444,7 +442,6 @@ def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
 
 def main(args: Optional[list[str]] = None) -> None:
     """The main function to initialize ROS2 and the GUI application."""
-    # Initialize QApplication before creating any widgets
     app = QApplication(sys.argv)
     package_share_directory = get_package_share_directory("auv_gui")
     app.setStyle("Fusion")
@@ -593,7 +590,7 @@ def main(args: Optional[list[str]] = None) -> None:
     mission_position_layout.addWidget(ros_node.send_button_nav, 2, 4)
     tabs.addTab(mission_position_widget, "Mission")
 
-    # --- Internal Status Tab ---
+    # Internal Status Tab
     internal_status = InternalStatusWidget()
     tabs.addTab(internal_status.get_widget(), "Internal")
 
