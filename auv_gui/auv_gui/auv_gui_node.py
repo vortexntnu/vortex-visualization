@@ -488,9 +488,9 @@ def main(args: Optional[list[str]] = None) -> None:
     mission_position_layout.setColumnStretch(0, 5)
 
     # Create the labels for current position and internal status
-    current_pos = QLabel("Current Position: Not Available")
+    current_pos = QLabel("<b>Current Position:</b> Not Available")
     current_pos.setStyleSheet("font-size: 30px;")
-    internal_status_label = QLabel("Internal Status: Not Available")
+    internal_status_label = QLabel("<b>Internal Status:</b> Not Available")
     internal_status_label.setStyleSheet("font-size: 30px;")
 
     # Group them in a horizontal layout
@@ -615,16 +615,16 @@ def main(args: Optional[list[str]] = None) -> None:
         )
         if len(ros_node.xpos_data) > 0 and ros_node.roll is not None:
             position_text = (
-                f"Current Position:\nX: {ros_node.xpos_data[-1]:.2f}\n"
-                f"Y: {ros_node.ypos_data[-1]:.2f}\n"
+                f"<b>Current Position:</b><br>X: {ros_node.xpos_data[-1]:.2f}<br>"
+                f"Y: {ros_node.ypos_data[-1]:.2f}<br>"
                 f"Z: {ros_node.zpos_data[-1]:.2f}"
             )
             orientation_text = (
-                f"Current Orientation:\nRoll: {ros_node.roll:.2f}\n"
-                f"Pitch: {ros_node.pitch:.2f}\n"
+                f"<b>Current Orientation:</b><br>Roll: {ros_node.roll:.2f}<br>"
+                f"Pitch: {ros_node.pitch:.2f}<br>"
                 f"Yaw: {ros_node.yaw:.2f}"
             )
-            current_pos.setText(position_text + "\n\n" + orientation_text)
+            current_pos.setText(position_text + "\n\n" + orientation_text + "\n")
 
         try:
             current_val = ros_node.current.queue[-1][0]
@@ -632,14 +632,14 @@ def main(args: Optional[list[str]] = None) -> None:
             temperature_val = ros_node.temperature.queue[-1][0]
             pressure_val = ros_node.pressure.queue[-1][0]
             status_text = (
-                f"Internal Status:\n"
-                f"Current: {current_val:.2f} A\n"
-                f"Voltage: {voltage_val:.2f} V\n"
-                f"Temperature: {temperature_val:.2f} °C\n"
+                f"<b>Internal Status:</b><br>"
+                f"Current: {current_val:.2f} A<br>"
+                f"Voltage: {voltage_val:.2f} V<br>"
+                f"Temperature: {temperature_val:.2f} °C<br>"
                 f"Pressure: {pressure_val:.2f} hPa"
             )
         except IndexError:
-            status_text = "Internal Status: Not Available"
+            status_text = "<b>Internal Status:</b> Not Available"
         internal_status_label.setText(status_text)
 
         internal_status.update(
