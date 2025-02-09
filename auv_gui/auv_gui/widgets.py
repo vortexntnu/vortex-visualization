@@ -40,9 +40,11 @@ class OpenGLPlotWidget(QWidget):
             color=(255, 0, 0, 255),
             size=5,  # Red dot
         )
+        self.waypoints_plot = gl.GLScatterPlotItem(color=(0, 255, 0, 255), size=5)
 
         self.view.addItem(self.trajectory)
         self.view.addItem(self.current_position_dot)
+        self.view.addItem(self.waypoints_plot)
 
         follow_button = pg.QtWidgets.QPushButton("Toggle Follow Mode")
         follow_button.clicked.connect(self.toggle_follow_mode)
@@ -68,19 +70,13 @@ class OpenGLPlotWidget(QWidget):
                 self.view.setCameraPosition(pos=vec)
 
         if len(self.gui_node.waypoints) > 0:
-            x_coords = []
-            y_coords = []
-            z_coords = []
-            for waypoint in self.gui_node.waypoints:
-                x = waypoint.pose.position.x
-                y = waypoint.pose.position.y
-                z = -waypoint.pose.position.z
-                x_coords.append(x)
-                y_coords.append(y)
-                z_coords.append(z)
-                waypoints_points = np.vstack((x_coords, y_coords, z_coords)).T
-                self.view.addItem(gl.GLScatterPlotItem(pos=waypoints_points, color=(0, 255, 0, 255), size=5))
-            self.gui_node.waypoints = []
+            waypoints = np.array(
+                [
+                    [wp.pose.position.x, wp.pose.position.y, -wp.pose.position.z]
+                    for wp in self.gui_node.waypoints
+                ]
+            )
+            self.waypoints_plot.setData(pos=waypoints)
 
     def clear_plot(self):
         """Clear the 3D plot by resetting the trajectory and position dot."""
