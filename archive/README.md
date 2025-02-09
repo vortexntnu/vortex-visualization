@@ -1,4 +1,4 @@
-The code in this folder is not maintained and may be outdated. The code in this folder is kept for historical purposes.
+This code is no longer maintained and may be outdated. It is preserved for historical reference.
 
 Includes:
 - [Thruster Visualization](./thruster-visualization/README.md) - Visualizes thruster data (for Freya) in Foxglove Studio
