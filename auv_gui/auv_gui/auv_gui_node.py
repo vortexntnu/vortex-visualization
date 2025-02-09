@@ -610,6 +610,7 @@ def main(args: Optional[list[str]] = None) -> None:
         plot_canvas.update_plot(
             ros_node.xpos_data, ros_node.ypos_data, ros_node.zpos_data
         )
+        
         if len(ros_node.xpos_data) > 0 and ros_node.roll is not None:
             position_text = (
                 f"<b>Current Position:</b><br>X: {ros_node.xpos_data[-1]:.2f}<br>"
@@ -621,7 +622,7 @@ def main(args: Optional[list[str]] = None) -> None:
                 f"Pitch: {ros_node.pitch:.2f}<br>"
                 f"Yaw: {ros_node.yaw:.2f}"
             )
-            current_pos.setText(position_text + "\n\n" + orientation_text + "\n")
+            current_pos.setText(position_text + "<br><br>" + orientation_text + "<br>")
 
         try:
             current_val = ros_node.current.queue[-1][0]
