@@ -35,6 +35,11 @@ class OpenGLPlotWidget(QWidget):
         self.trajectory = gl.GLLinePlotItem(
             color=(0, 0, 255, 255), width=2
         )  # Blue line
+
+        self.line = gl.GLLinePlotItem(
+            color=(200, 0, 0, 255), width=2
+        ) # Red line
+
         self.current_position_dot = gl.GLScatterPlotItem(
             pos=np.array([[0, 0, 0]]),
             color=(255, 0, 0, 255),
@@ -44,7 +49,7 @@ class OpenGLPlotWidget(QWidget):
 
         self.view.addItem(self.trajectory)
         self.view.addItem(self.current_position_dot)
-        self.view.addItem(self.waypoints_plot)
+        self.view.addItem(self.line)
 
         follow_button = pg.QtWidgets.QPushButton("Toggle Follow Mode")
         follow_button.clicked.connect(self.toggle_follow_mode)
@@ -85,9 +90,33 @@ class OpenGLPlotWidget(QWidget):
         self.gui_node.ypos_data.clear()
         self.gui_node.zpos_data.clear()
 
+        self.line.setData(pos=np.empty((0, 3), dtype=np.float32))
+
     def toggle_follow_mode(self):
         """Toggle follow mode on or off."""
         self.follow_mode = not self.follow_mode
+
+    def plot_points_and_line(self, points):
+        """
+        Plots two points and a line connecting them.
+        
+        Parameters:
+            points (list): A list containing two points, where each point is a list [x, y, z].
+        """
+        if len(points) != 2:
+            raise ValueError("Input list must contain exactly two points.")
+
+        # Extract the two points
+        point1 = points[0]
+        point2 = points[1]
+        point2[2] *= -1  # Invert the z-axis
+
+        # Create the line between the two points
+        line_points = np.array([point1, point2])
+
+        # Plot the two points and the line
+        self.line.setData(pos=line_points)
+
 
 
 class AnalogWidget:

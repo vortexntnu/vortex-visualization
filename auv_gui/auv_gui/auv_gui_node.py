@@ -35,7 +35,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float32
-from vortex_msgs.action import NavigateWaypoints, ReferenceFilterWaypoint
+from vortex_msgs.action import LOSGuidance, ReferenceFilterWaypoint, NavigateWaypoints
 from vortex_utils.python_utils import euler_to_quat, quat_to_euler
 
 from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
@@ -64,14 +64,7 @@ class GuiNode(Node):
             self, ReferenceFilterWaypoint, "reference_filter"
         )
         self._navigate_waypoints_client = ActionClient(
-            self, NavigateWaypoints, "navigate_waypoints"
-        )
-
-        # ROS2 parameters
-        namespace = (
-            self.declare_parameter("topics.namespace", "orca")
-            .get_parameter_value()
-            .string_value
+            self, LOSGuidance, "los_guidance"
         )
 
         topic_params = [
@@ -88,12 +81,11 @@ class GuiNode(Node):
             setattr(
                 self,
                 param + "_topic",
-                namespace + self.get_parameter(f"topics.{param}").value,
+                self.get_parameter(f"topics.{param}").value,
             )
 
-        print(self.__dict__)
-
         self.declare_parameter("mock_data", False)
+
         self.mock_data = self.get_parameter("mock_data").value
 
         # Subscriber to the odometry topics
@@ -112,6 +104,7 @@ class GuiNode(Node):
         )
 
         self.waypoints = []
+        self.los_points = []
 
         # Variables to store odometry data
         self.xpos_data: list[float] = []  # x position
@@ -179,6 +172,10 @@ class GuiNode(Node):
         self.send_button_ref.clicked.connect(self.send_goal_reference_filter)
         self.send_button_ref.setEnabled(False)
 
+        self.send_button_los = QPushButton("Send Mission (LOS)")
+        self.send_button_los.clicked.connect(self.send_goal_los)
+        self.send_button_los.setEnabled(False)
+
         self.send_button_nav = QPushButton("Send Mission (NavigateWaypoints)")
         self.send_button_nav.clicked.connect(self.send_goal_navigate_waypoints)
         self.send_button_nav.setEnabled(False)
@@ -213,12 +210,19 @@ class GuiNode(Node):
         self.pitch_input.clear()
         self.yaw_input.clear()
 
+        self.send_button_ref.setEnabled(True)
+        self.send_button_los.setEnabled(True)
+
+        if self.waypoint_list.count() > 1:
+            self.send_button_nav.setEnabled(True)
+
     def clear_waypoints(self):
         """Clear the waypoint list."""
         self.waypoint_list.clear()
         self.ordered_list.clear()
         self.send_button_nav.setEnabled(False)
         self.send_button_ref.setEnabled(False)
+        self.send_button_los.setEnabled(False)
 
     def update_ordered_waypoints(self):
         """Update internal order of waypoints based on the reordered list."""
@@ -276,6 +280,31 @@ class GuiNode(Node):
             goal_msg, feedback_callback=None
         )
         self._send_goal_future.add_done_callback(self.goal_response_callback)
+
+    def send_goal_los(self):
+        """Send a single waypoint to the LOSGuidance action."""
+        waypoints = self.get_waypoints()
+        if not waypoints or len(waypoints) != 1:
+            self.get_logger().error("This action requires exactly one waypoint.")
+            return
+
+        goal_msg = LOSGuidance.Goal()
+        goal_msg.goal.point = waypoints[0].pose.position
+
+        # Send the goal asynchronously
+        if not self._navigate_waypoints_client.wait_for_server(timeout_sec=1.0):
+            self.get_logger().error("LOSGuidance action server not available.")
+            return
+        self.get_logger().info("Sending goal (LOS)...")
+        self._send_goal_future = self._navigate_waypoints_client.send_goal_async(
+            goal_msg, feedback_callback=None
+        )
+        self._send_goal_future.add_done_callback(self.goal_response_callback)
+
+        current_pos = [self.xpos_data[-1], self.ypos_data[-1], self.zpos_data[-1]]
+        point = waypoints[0].pose.position
+        goal = [point.x, point.y, point.z]
+        self.los_points = [current_pos, goal]
 
     def send_goal_navigate_waypoints(self):
         """Send reordered waypoints to the NavigateWaypoints action."""
@@ -566,6 +595,7 @@ def main(args: Optional[list[str]] = None) -> None:
 
     buttons_layout.addWidget(ros_node.add_button)
     buttons_layout.addWidget(ros_node.send_button_ref)
+    buttons_layout.addWidget(ros_node.send_button_los)
     buttons_layout.addWidget(ros_node.clear_button)
     buttons_layout.addWidget(ros_node.cancel_button)
     buttons_layout.addWidget(ros_node.clear_plot_button)
@@ -630,6 +660,10 @@ def main(args: Optional[list[str]] = None) -> None:
                 f"Yaw: {ros_node.yaw:.2f}"
             )
             current_pos.setText(position_text + "<br><br>" + orientation_text + "<br>")
+
+        if len(ros_node.los_points) > 0:
+            plot_canvas.plot_points_and_line(ros_node.los_points)
+            ros_node.los_points = []
 
         try:
             current_val = ros_node.current.queue[-1][0]
