@@ -112,7 +112,7 @@ class GuiNode(Node):
             qos_profile=best_effort_qos,
         )
 
-        self.decoder = H264Decoder()
+        self.decoder = H264Decoder(720, 1280)
         self.decoded_frames = None
 
         self.decoder_thread = Thread(target=self.decoder.start, daemon=True)
