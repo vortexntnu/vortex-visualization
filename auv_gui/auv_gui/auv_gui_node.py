@@ -112,7 +112,7 @@ class GuiNode(Node):
             qos_profile=best_effort_qos,
         )
 
-        self.decoder = H264Decoder(720, 1280)
+        self.decoder = H264Decoder()
         self.decoded_frames = None
 
         self.decoder_thread = Thread(target=self.decoder.start, daemon=True)
@@ -211,7 +211,7 @@ class GuiNode(Node):
         bytes_per_line = 3 * width
 
         q_image = QImage(
-            frame.data, width, height, bytes_per_line, QImage.Format.Format_RGB888
+            frame.data, width, height, bytes_per_line, QImage.Format.Format_BGR888
         )
 
         pixmap = QPixmap.fromImage(q_image)
