@@ -5,6 +5,7 @@ import sys
 from threading import Thread
 from typing import Optional
 
+import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import (
@@ -13,7 +14,7 @@ from geometry_msgs.msg import (
     TwistWithCovarianceStamped,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QDoubleValidator, QIcon, QPalette
+from PyQt6.QtGui import QAction, QDoubleValidator, QIcon, QImage, QPalette, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -34,9 +35,10 @@ from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Float32
-from vortex_msgs.action import LOSGuidance, ReferenceFilterWaypoint, NavigateWaypoints
-from vortex_utils.python_utils import euler_to_quat, quat_to_euler
+from vortex_msgs.action import LOSGuidance, NavigateWaypoints, ReferenceFilterWaypoint
+from vortex_utils.python_utils import H264Decoder, euler_to_quat, quat_to_euler
 
 from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
 
@@ -102,6 +104,19 @@ class GuiNode(Node):
             self.twist_callback,
             qos_profile=best_effort_qos,
         )
+
+        self.image_subscription = self.create_subscription(
+            CompressedImage,
+            "/right/image_compressed",
+            self.image_callback,
+            qos_profile=best_effort_qos,
+        )
+
+        self.decoder = H264Decoder()
+        self.decoded_frames = None
+
+        self.decoder_thread = Thread(target=self.decoder.start, daemon=True)
+        self.decoder_thread.start()
 
         self.waypoints = []
         self.los_points = []
@@ -185,6 +200,22 @@ class GuiNode(Node):
 
         self.cancel_button = QPushButton("Cancel Mission")
         self.cancel_button.clicked.connect(self.cancel_goal)
+
+        # Label to display video frames
+        self.video_label = QLabel()
+        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def display_frame(self, frame: np.ndarray) -> None:
+        """Display a frame in the GUI."""
+        height, width, channel = frame.shape
+        bytes_per_line = 3 * width
+
+        q_image = QImage(
+            frame.data, width, height, bytes_per_line, QImage.Format.Format_RGB888
+        )
+
+        pixmap = QPixmap.fromImage(q_image)
+        self.video_label.setPixmap(pixmap)
 
     def add_waypoint(self):
         """Add a waypoint to the list widget."""
@@ -393,6 +424,14 @@ class GuiNode(Node):
         self.send_button_nav.setEnabled(self.ordered_list.count() > 1)
 
     # --- Callback functions ---
+    def image_callback(self, msg: CompressedImage) -> None:
+        """Callback function that is triggered when a camera message is received."""
+        self.decoder.push_data(msg.data)
+
+        if self.decoder.decoded_frames:
+            frame = self.decoder.decoded_frames[-1]
+            self.display_frame(frame)
+
     def cancel_result_callback(self, future):
         """Callback when the goal cancel request has been completed."""
         try:
@@ -509,6 +548,12 @@ def main(args: Optional[list[str]] = None) -> None:
     tabs = QTabWidget()
     tabs.setTabPosition(QTabWidget.TabPosition.North)
     tabs.setMovable(True)
+
+    # --- Image Tab ---
+    image_tab_widget = QWidget()
+    image_layout = QVBoxLayout(image_tab_widget)
+    image_layout.addWidget(ros_node.video_label)
+    tabs.addTab(image_tab_widget, "Camera Feed")
 
     # --- Mission and Position Tab ---
     mission_position_widget = QWidget()
