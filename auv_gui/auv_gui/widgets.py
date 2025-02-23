@@ -36,9 +36,7 @@ class OpenGLPlotWidget(QWidget):
             color=(0, 0, 255, 255), width=2
         )  # Blue line
 
-        self.line = gl.GLLinePlotItem(
-            color=(200, 0, 0, 255), width=2
-        ) # Red line
+        self.line = gl.GLLinePlotItem(color=(200, 0, 0, 255), width=2)  # Red line
 
         self.current_position_dot = gl.GLScatterPlotItem(
             pos=np.array([[0, 0, 0]]),
@@ -97,11 +95,12 @@ class OpenGLPlotWidget(QWidget):
         self.follow_mode = not self.follow_mode
 
     def plot_points_and_line(self, points):
-        """
-        Plots two points and a line connecting them.
-        
-        Parameters:
+        """Plots two points and a line connecting them.
+
+        Parameters
+        ----------
             points (list): A list containing two points, where each point is a list [x, y, z].
+
         """
         if len(points) != 2:
             raise ValueError("Input list must contain exactly two points.")
@@ -116,7 +115,6 @@ class OpenGLPlotWidget(QWidget):
 
         # Plot the two points and the line
         self.line.setData(pos=line_points)
-
 
 
 class AnalogWidget:

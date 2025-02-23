@@ -33,7 +33,11 @@ def generate_launch_description():
         output="screen",
         namespace="orca",
         emulate_tty=True,
-        parameters=[config, orca_params, {"mock_data": LaunchConfiguration("mock_data")}],
+        parameters=[
+            config,
+            orca_params,
+            {"mock_data": LaunchConfiguration("mock_data")},
+        ],
     )
 
     return LaunchDescription([mock_data_arg, gui_node])
