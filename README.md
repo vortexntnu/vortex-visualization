@@ -1,8 +1,8 @@
 # vortex-visualization
-Repo for visualizing our various data streams.
+[![Industrial CI](https://github.com/vortexntnu/vortex-visualization/actions/workflows/industrial-ci.yml/badge.svg)](https://github.com/vortexntnu/vortex-visualization/actions/workflows/industrial-ci.yml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/vortexntnu/vortex-visualization/main.svg)](https://results.pre-commit.ci/latest/github/vortexntnu/vortex-visualization/main)
 
 Includes:
-- [Thruster Visualization](./thruster-visualization/README.md) - Visualizes thruster data (for Freya) in Foxglove Studio
-- [URDF Models](./urdf-models/README.md) - Collection of 3D models that can be seen in Foxglove Studio
-- [Foxglove Studio Parameter Extension](./foxglove-extensions/parameter-slider-extension/README.md) - Extension for Foxglove that lets you change node parameters more easily
 - [AUV GUI](./auv_gui/README.md) - User interface for AUV
+
+Repo for visualizing our various data streams.
