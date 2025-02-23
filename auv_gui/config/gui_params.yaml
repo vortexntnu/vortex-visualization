@@ -1,0 +1,4 @@
+auv_gui_node:
+  ros__parameters:
+    gui_auv:
+      history_length: 3000

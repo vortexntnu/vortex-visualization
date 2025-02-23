@@ -1,0 +1,5 @@
+pglive==0.8.0
+playsound==1.3.0
+PyOpenGL==3.1.9
+PyQt6==6.7.1
+pyqtgraph==0.13.7

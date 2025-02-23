@@ -166,3 +166,6 @@ dist
 
 #add .foxe file
 *.foxe
+
+# python compiled files
+*.pyc
