@@ -107,7 +107,7 @@ class GuiNode(Node):
 
         self.image_subscription = self.create_subscription(
             CompressedImage,
-            "/right/image_compressed",
+            "/image_compressed",
             self.image_callback,
             qos_profile=best_effort_qos,
         )
