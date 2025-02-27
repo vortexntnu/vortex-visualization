@@ -37,7 +37,8 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Float32
 from vortex_msgs.action import LOSGuidance, ReferenceFilterWaypoint
-from vortex_utils.python_utils import H264Decoder, euler_to_quat, quat_to_euler
+from vortex_utils.python_utils import euler_to_quat, quat_to_euler
+from vortex_utils.gst_utils import H264Decoder
 
 from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
 from auv_gui.data_manager import DataManager
