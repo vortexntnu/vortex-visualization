@@ -1,22 +1,30 @@
 #!/usr/bin/env python3
 
 import sys
+from threading import Thread
+
+import numpy as np
 from ament_index_python.packages import get_package_share_directory
+from data_manager import DataManager
 from playsound import playsound
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QDoubleValidator, QIcon, QPalette
+from PyQt6.QtGui import QDoubleValidator, QIcon, QImage, QPalette, QPixmap
 from PyQt6.QtWidgets import (
-    QApplication, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QMainWindow, QPushButton,
-    QTabWidget, QVBoxLayout, QWidget
+    QApplication,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QPushButton,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
-from geometry_msgs.msg import PoseStamped
-from vortex_utils.python_utils import euler_to_quat, H264Decoder
-from threading import Thread
-from PyQt6.QtGui import QImage, QPixmap
-import numpy as np
-from widgets import OpenGLPlotWidget, InternalStatusWidget
-from data_manager import DataManager
+from vortex_utils.python_utils import H264Decoder
+from widgets import InternalStatusWidget, OpenGLPlotWidget
 
 
 class MainWindow(QMainWindow):
@@ -26,7 +34,9 @@ class MainWindow(QMainWindow):
         self.data_manager = DataManager()
         self.setWindowTitle("Vortex GUI")
         self.setGeometry(100, 100, 600, 400)
-        self.setWindowIcon(QIcon(get_package_share_directory("auv_gui") + "/resources/vortex_logo.png"))
+        self.setWindowIcon(
+            QIcon(get_package_share_directory("auv_gui") + "/resources/vortex_logo.png")
+        )
 
         self.init_ui()
 
@@ -35,6 +45,9 @@ class MainWindow(QMainWindow):
 
         self.decoder_thread = Thread(target=self.decoder.start, daemon=True)
         self.decoder_thread.start()
+
+        self.video_label = QLabel()
+        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def init_ui(self):
         """Initialize the GUI layout and widgets."""
@@ -166,11 +179,21 @@ class MainWindow(QMainWindow):
 
     def add_waypoint(self):
         """Add a waypoint to the list widget."""
-        x, y, z = self.x_input.text().strip(), self.y_input.text().strip(), self.z_input.text().strip()
-        roll, pitch, yaw = self.roll_input.text().strip() or 0, self.pitch_input.text().strip() or 0, self.yaw_input.text().strip() or 0
+        x, y, z = (
+            self.x_input.text().strip(),
+            self.y_input.text().strip(),
+            self.z_input.text().strip(),
+        )
+        roll, pitch, yaw = (
+            self.roll_input.text().strip() or 0,
+            self.pitch_input.text().strip() or 0,
+            self.yaw_input.text().strip() or 0,
+        )
 
         if x and y and z:
-            list_entry = f"X: {x}, Y: {y}, Z: {z}, Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}"
+            list_entry = (
+                f"X: {x}, Y: {y}, Z: {z}, Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}"
+            )
             self.waypoint_list.addItem(QListWidgetItem(list_entry))
 
             self.send_button_ref.setEnabled(True)
