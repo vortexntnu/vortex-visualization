@@ -1,12 +1,16 @@
-import pandas as pd
 import threading
+
+import pandas as pd
+
 
 class DataManager:
     def __init__(self):
         """Manages storage and retrieval of ROS topic data using Pandas."""
         self.lock = threading.Lock()
         self.data = {
-            "pose": pd.DataFrame(columns=["timestamp", "x", "y", "z", "roll", "pitch", "yaw"]),
+            "pose": pd.DataFrame(
+                columns=["timestamp", "x", "y", "z", "roll", "pitch", "yaw"]
+            ),
             "twist": pd.DataFrame(columns=["timestamp", "vx", "vy", "vz"]),
             "current": pd.DataFrame(columns=["timestamp", "value"]),
             "voltage": pd.DataFrame(columns=["timestamp", "value"]),
@@ -19,7 +23,9 @@ class DataManager:
         with self.lock:
             if topic in self.data:
                 df = self.data[topic]
-                self.data[topic] = pd.concat([df, pd.DataFrame([values])], ignore_index=True)
+                self.data[topic] = pd.concat(
+                    [df, pd.DataFrame([values])], ignore_index=True
+                )
 
     def get_latest(self, topic: str):
         """Returns the latest recorded value of a topic."""
