@@ -17,63 +17,34 @@ from PyQt6.QtWidgets import (
 
 
 class OpenGLPlotWidget(QWidget):
-    def __init__(self, gui_node, parent=None):
-        """Initialize the OpenGL 3D plot."""
+    def __init__(self, data_manager, parent=None):
+        """Initialize the OpenGL 3D plot with DataManager."""
         super().__init__(parent)
-        self.opengl_context = QOpenGLContext.currentContext()
-        if not self.opengl_context:
-            print("Warning: No OpenGL context available!")
-
-        self.gui_node = gui_node
-
-        self.follow_mode = False
+        self.data_manager = data_manager
 
         self.view = gl.GLViewWidget()
         self.view.setCameraPosition(distance=10)
         self.view.setBackgroundColor("gray")
 
         self.grid = gl.GLGridItem()
-        self.grid.setSize(20, 20, 1)
         self.view.addItem(self.grid)
 
-        self.trajectory = gl.GLLinePlotItem(
-            color=(0, 0, 255, 255), width=2
-        )  # Blue line
-
-        self.line = gl.GLLinePlotItem(color=(200, 0, 0, 255), width=2)  # Red line
-
-        self.current_position_dot = gl.GLScatterPlotItem(
-            pos=np.array([[0, 0, 0]]),
-            color=(255, 0, 0, 255),
-            size=5,  # Red dot
-        )
-
+        self.trajectory = gl.GLLinePlotItem(color=(0, 0, 255, 255), width=2)
+        self.current_position_dot = gl.GLScatterPlotItem(color=(255, 0, 0, 255), size=5)
         self.view.addItem(self.trajectory)
         self.view.addItem(self.current_position_dot)
-        self.view.addItem(self.line)
 
-        follow_button = pg.QtWidgets.QPushButton("Toggle Follow Mode")
-        follow_button.clicked.connect(self.toggle_follow_mode)
-
-        layout = pg.QtWidgets.QVBoxLayout()
-        layout.addWidget(follow_button)
+        layout = QVBoxLayout()
         layout.addWidget(self.view)
         self.setLayout(layout)
 
-    def update_plot(self, x_data, y_data, z_data):
-        """Update the 3D plot with new trajectory data."""
-        if len(x_data) > 1:
-            points = np.vstack((x_data, y_data, z_data)).T
+    def update_plot(self):
+        """Fetch latest pose data and update 3D plot."""
+        data = self.data_manager.get_data("pose", limit=100)
+        if not data.empty:
+            points = data[["x", "y", "z"]].values
             self.trajectory.setData(pos=points)
-
-            self.current_position_dot.setData(pos=points[-1:])
-
-            if self.follow_mode:
-                vec = QVector3D()
-                vec.setX(points[-1][0])
-                vec.setY(points[-1][1])
-                vec.setZ(points[-1][2])
-                self.view.setCameraPosition(pos=vec)
+            self.current_position_dot.setData(pos=[points[-1]])
 
     def clear_plot(self):
         """Clear the 3D plot by resetting the trajectory and position dot."""
@@ -142,7 +113,9 @@ class AnalogWidget:
 
 
 class InternalStatusWidget:
-    def __init__(self):
+    def __init__(self, data_manager, parent=None):
+        """Initialize the internal status widget."""
+        self.data_manager = data_manager
         self.internal_widget = QWidget()
         self.internal_layout = QVBoxLayout(self.internal_widget)
 

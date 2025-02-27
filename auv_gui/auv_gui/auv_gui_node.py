@@ -40,6 +40,7 @@ from vortex_msgs.action import LOSGuidance, ReferenceFilterWaypoint
 from vortex_utils.python_utils import H264Decoder, euler_to_quat, quat_to_euler
 
 from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
+from auv_gui.data_manager import DataManager
 
 best_effort_qos = QoSProfile(
     reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -120,19 +121,7 @@ class GuiNode(Node):
         self.waypoints = []
         self.los_points = []
 
-        # Variables to store odometry data
-        self.xpos_data: list[float] = []  # x position
-        self.ypos_data: list[float] = []  # y position
-        self.zpos_data: list[float] = []  # z position
-
-        self.w_data: list[float] = []  # w component of the quaternion
-        self.x_data: list[float] = []  # x component of the quaternion
-        self.y_data: list[float] = []  # y component of the quaternion
-        self.z_data: list[float] = []  # z component of the quaternion
-
-        self.roll: float = None
-        self.pitch: float = None
-        self.yaw: float = None
+        self.data_manager = DataManager()
 
         # Subscribe to internal status topics
         self.current_subscriber = self.create_subscription(
@@ -148,57 +137,6 @@ class GuiNode(Node):
             Float32, self.pressure_topic, self.pressure_callback, 5
         )
 
-        # Variables for internal status
-        self.current = Queue(maxsize=10)
-        self.voltage = Queue(maxsize=10)
-        self.temperature = Queue(maxsize=10)
-        self.pressure = Queue(maxsize=10)
-
-        # --- Waypoint stuff ---
-
-        # Inputs for X, Y, Z
-        self.x_input = QLineEdit()
-        self.x_input.setPlaceholderText("X")
-        self.x_input.setValidator(QDoubleValidator())
-        self.y_input = QLineEdit()
-        self.y_input.setPlaceholderText("Y")
-        self.y_input.setValidator(QDoubleValidator())
-        self.z_input = QLineEdit()
-        self.z_input.setPlaceholderText("Z")
-        self.z_input.setValidator(QDoubleValidator())
-
-        # Inputs for roll, pitch, yaw
-        self.roll_input = QLineEdit()
-        self.roll_input.setPlaceholderText("Roll")
-        self.roll_input.setValidator(QDoubleValidator())
-        self.pitch_input = QLineEdit()
-        self.pitch_input.setPlaceholderText("Pitch")
-        self.pitch_input.setValidator(QDoubleValidator())
-        self.yaw_input = QLineEdit()
-        self.yaw_input.setPlaceholderText("Yaw")
-        self.yaw_input.setValidator(QDoubleValidator())
-
-        # Buttons
-        self.add_button = QPushButton("Add Waypoint")
-        self.add_button.clicked.connect(self.add_waypoint)
-
-        self.send_button_ref = QPushButton("Send Mission (ReferenceFilter)")
-        self.send_button_ref.clicked.connect(self.send_goal_reference_filter)
-        self.send_button_ref.setEnabled(False)
-
-        self.send_button_los = QPushButton("Send Mission (LOS)")
-        self.send_button_los.clicked.connect(self.send_goal_los)
-        self.send_button_los.setEnabled(False)
-
-        self.clear_button = QPushButton("Clear Waypoints")
-        self.clear_button.clicked.connect(self.clear_waypoints)
-
-        self.cancel_button = QPushButton("Cancel Mission")
-        self.cancel_button.clicked.connect(self.cancel_goal)
-
-        # Label to display video frames
-        self.video_label = QLabel()
-        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def display_frame(self, frame: np.ndarray) -> None:
         """Display a frame in the GUI."""
@@ -212,72 +150,6 @@ class GuiNode(Node):
         pixmap = QPixmap.fromImage(q_image)
         self.video_label.setPixmap(pixmap)
 
-    def add_waypoint(self):
-        """Add a waypoint to the list widget."""
-        x = self.x_input.text().strip()
-        y = self.y_input.text().strip()
-        z = self.z_input.text().strip()
-        roll = self.roll_input.text().strip() or 0
-        pitch = self.pitch_input.text().strip() or 0
-        yaw = self.yaw_input.text().strip() or 0
-
-        if x and y and z:
-            list_entry = f"X: {x}, Y: {y}, Z: {z}"
-            list_entry += f", Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}"
-            self.waypoint_list.addItem(QListWidgetItem(list_entry))
-        else:
-            self.get_logger().warn("Invalid waypoint.")
-
-        # Clear inputs
-        self.x_input.clear()
-        self.y_input.clear()
-        self.z_input.clear()
-        self.roll_input.clear()
-        self.pitch_input.clear()
-        self.yaw_input.clear()
-
-        self.send_button_ref.setEnabled(True)
-        self.send_button_los.setEnabled(True)
-
-    def clear_waypoints(self):
-        """Clear the waypoint list."""
-        self.waypoint_list.clear()
-        self.send_button_ref.setEnabled(False)
-        self.send_button_los.setEnabled(False)
-
-    def get_waypoints(self):
-        """Retrieve waypoints from the selected items in the list."""
-        selected_items = self.waypoint_list.selectedItems()
-
-        if not selected_items:
-            self.get_logger().error("No waypoints selected.")
-            return None
-
-        waypoints = []
-        for item in selected_items:
-            text = item.text()
-            parts = text.replace(" ", "").split(",")
-            x_val = float(parts[0].split(":")[1])
-            y_val = float(parts[1].split(":")[1])
-            z_val = float(parts[2].split(":")[1])
-            roll_val = float(parts[3].split(":")[1])
-            pitch_val = float(parts[4].split(":")[1])
-            yaw_val = float(parts[5].split(":")[1])
-
-            pose_stamped = PoseStamped()
-            pose_stamped.pose.position.x = x_val
-            pose_stamped.pose.position.y = y_val
-            pose_stamped.pose.position.z = z_val
-
-            quat = euler_to_quat(roll_val, pitch_val, yaw_val)
-            pose_stamped.pose.orientation.x = quat[0]
-            pose_stamped.pose.orientation.y = quat[1]
-            pose_stamped.pose.orientation.z = quat[2]
-            pose_stamped.pose.orientation.w = quat[3]
-
-            waypoints.append(pose_stamped)
-
-        return waypoints
 
     def send_goal_reference_filter(self):
         """Send a single waypoint to the ReferenceFilter action."""
@@ -323,11 +195,6 @@ class GuiNode(Node):
         point = waypoints[0].pose.position
         goal = [point.x, point.y, point.z]
         self.los_points = [current_pos, goal]
-
-    def update_button_states(self):
-        """Enable/Disable buttons based on waypoint selection."""
-        selected_count = len(self.waypoint_list.selectedItems())
-        self.send_button_ref.setEnabled(selected_count == 1)
 
     def cancel_goal(self) -> None:
         """Cancel the currently active goal."""
@@ -379,54 +246,35 @@ class GuiNode(Node):
         result = future.result().result.success
         self.get_logger().info(f"Mission completed successfully: {result}")
 
-    def pose_callback(self, msg: PoseWithCovarianceStamped) -> None:
-        """Callback function that is triggered when an odometry message is received."""
-        # Extract x, y, z positions from the odometry message
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
-        z = -(msg.pose.pose.position.z)
-        self.xpos_data.append(x)
-        self.ypos_data.append(y)
-        self.zpos_data.append(z)
+    def pose_callback(self, msg):
+        timestamp = time.time()
+        data = {
+            "timestamp": timestamp,
+            "x": msg.pose.pose.position.x,
+            "y": msg.pose.pose.position.y,
+            "z": msg.pose.pose.position.z,
+            "roll": msg.pose.pose.orientation.x,
+            "pitch": msg.pose.pose.orientation.y,
+            "yaw": msg.pose.pose.orientation.z,
+        }
+        self.data_manager.add_data("pose", data)
 
-        # Extract the quaternion components from the odometry message
-        w = msg.pose.pose.orientation.w
-        x = msg.pose.pose.orientation.x
-        y = msg.pose.pose.orientation.y
-        z = msg.pose.pose.orientation.z
-        self.roll, self.pitch, self.yaw = quat_to_euler(x, y, z, w)
+    def twist_callback(self, msg):
+        timestamp = time.time()
+        data = {"timestamp": timestamp, "vx": msg.twist.twist.linear.x, "vy": msg.twist.twist.linear.y, "vz": msg.twist.twist.linear.z}
+        self.data_manager.add_data("twist", data)
 
-        # Limit the stored data for real-time plotting (avoid memory overflow)
-        # max_data_points = (
-        #     self.get_parameter("history_length").get_parameter_value().integer_value
-        # )
-        # if len(self.xpos_data) > max_data_points:
-        #     self.xpos_data.pop(0)
-        #     self.ypos_data.pop(0)
-        #     self.zpos_data.pop(0)
+    def current_callback(self, msg):
+        self.data_manager.add_data("current", {"timestamp": time.time(), "value": msg.data})
 
-    def twist_callback(self, msg: TwistWithCovarianceStamped) -> None:
-        pass
+    def voltage_callback(self, msg):
+        self.data_manager.add_data("voltage", {"timestamp": time.time(), "value": msg.data})
 
-    def current_callback(self, msg: Float32) -> None:
-        """Callback function that is triggered when a current message is received."""
-        temp_timestamp = time.time()
-        self.current.put((msg.data, temp_timestamp))
+    def temperature_callback(self, msg):
+        self.data_manager.add_data("temperature", {"timestamp": time.time(), "value": msg.data})
 
-    def voltage_callback(self, msg: Float32) -> None:
-        """Callback function that is triggered when a voltage message is received."""
-        temp_timestamp = time.time()
-        self.voltage.put((msg.data, temp_timestamp))
-
-    def temperature_callback(self, msg: Float32) -> None:
-        """Callback function that is triggered when a temperature message is received."""
-        temp_timestamp = time.time()
-        self.temperature.put((msg.data, temp_timestamp))
-
-    def pressure_callback(self, msg: Float32) -> None:
-        """Callback function that is triggered when a pressure message is received."""
-        temp_timestamp = time.time()
-        self.pressure.put((msg.data, temp_timestamp))
+    def pressure_callback(self, msg):
+        self.data_manager.add_data("pressure", {"timestamp": time.time(), "value": msg.data})
 
 
 def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
@@ -473,113 +321,6 @@ def main(args: Optional[list[str]] = None) -> None:
     image_layout = QVBoxLayout(image_tab_widget)
     image_layout.addWidget(ros_node.video_label)
     tabs.addTab(image_tab_widget, "Camera Feed")
-
-    # --- Mission and Position Tab ---
-    mission_position_widget = QWidget()
-    mission_position_layout = QGridLayout(mission_position_widget)
-
-    # --- Position Section ---
-    plot_canvas = OpenGLPlotWidget(ros_node, mission_position_widget)
-    mission_position_layout.addWidget(plot_canvas, 0, 0, 1, 3)
-    mission_position_layout.setRowStretch(0, 5)
-    mission_position_layout.setColumnStretch(0, 5)
-
-    # Create the labels for current position and internal status
-    current_pos = QLabel("<b>Current Position:</b> Not Available")
-    current_pos.setStyleSheet("font-size: 30px;")
-    internal_status_label = QLabel("<b>Internal Status:</b> Not Available")
-    internal_status_label.setStyleSheet("font-size: 30px;")
-
-    # Group them in a horizontal layout
-    status_layout = QVBoxLayout()
-    status_layout.addWidget(current_pos)
-    status_layout.addWidget(internal_status_label)
-    mission_position_layout.addLayout(status_layout, 0, 4)
-
-    # --- Mission Section ---
-    inputs_layout = QHBoxLayout()
-    buttons_layout = QHBoxLayout()
-
-    # Inputs for X, Y, Z
-    ros_node.x_input = QLineEdit()
-    ros_node.x_input.setPlaceholderText("X")
-    ros_node.x_input.setValidator(QDoubleValidator())
-
-    ros_node.y_input = QLineEdit()
-    ros_node.y_input.setPlaceholderText("Y")
-    ros_node.y_input.setValidator(QDoubleValidator())
-
-    ros_node.z_input = QLineEdit()
-    ros_node.z_input.setPlaceholderText("Z")
-    ros_node.z_input.setValidator(QDoubleValidator())
-
-    # Inputs for roll, pitch, yaw
-    ros_node.roll_input = QLineEdit()
-    ros_node.roll_input.setPlaceholderText("Roll")
-    ros_node.roll_input.setValidator(QDoubleValidator())
-
-    ros_node.pitch_input = QLineEdit()
-    ros_node.pitch_input.setPlaceholderText("Pitch")
-    ros_node.pitch_input.setValidator(QDoubleValidator())
-
-    ros_node.yaw_input = QLineEdit()
-    ros_node.yaw_input.setPlaceholderText("Yaw")
-    ros_node.yaw_input.setValidator(QDoubleValidator())
-
-    inputs_layout.addWidget(QLabel("Waypoint:"))
-    inputs_layout.addWidget(ros_node.x_input)
-    inputs_layout.addWidget(ros_node.y_input)
-    inputs_layout.addWidget(ros_node.z_input)
-
-    inputs_layout.addWidget(QLabel("Axes:"))
-    inputs_layout.addWidget(ros_node.roll_input)
-    inputs_layout.addWidget(ros_node.pitch_input)
-    inputs_layout.addWidget(ros_node.yaw_input)
-
-    # Buttons for mission interface
-    ros_node.add_button = QPushButton("Add Waypoint")
-    ros_node.add_button.clicked.connect(ros_node.add_waypoint)
-
-    ros_node.send_button_ref = QPushButton("Send Mission (ReferenceFilter)")
-    ros_node.send_button_ref.clicked.connect(ros_node.send_goal_reference_filter)
-    ros_node.send_button_ref.setEnabled(False)
-
-    ros_node.clear_button = QPushButton("Clear Waypoints")
-    ros_node.clear_button.clicked.connect(ros_node.clear_waypoints)
-
-    ros_node.cancel_button = QPushButton("Cancel Mission")
-    ros_node.cancel_button.clicked.connect(ros_node.cancel_goal)
-
-    ros_node.clear_plot_button = QPushButton("Clear Plot")
-    ros_node.clear_plot_button.clicked.connect(plot_canvas.clear_plot)
-
-    buttons_layout.addWidget(ros_node.add_button)
-    buttons_layout.addWidget(ros_node.send_button_ref)
-    buttons_layout.addWidget(ros_node.send_button_los)
-    buttons_layout.addWidget(ros_node.clear_button)
-    buttons_layout.addWidget(ros_node.cancel_button)
-    buttons_layout.addWidget(ros_node.clear_plot_button)
-
-    # List widget to display waypoints
-    ros_node.waypoint_list = QListWidget()
-    ros_node.waypoint_list.setSelectionMode(
-        QAbstractItemView.SelectionMode.ExtendedSelection
-    )
-    ros_node.waypoint_list.itemSelectionChanged.connect(ros_node.update_button_states)
-
-    # Add layouts to the mission position layout
-    mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 4)
-    mission_position_layout.addLayout(buttons_layout, 2, 0, 1, 4)
-    mission_position_layout.addWidget(ros_node.waypoint_list, 3, 0, 1, 4)
-    tabs.addTab(mission_position_widget, "Mission")
-
-    # Internal Status Tab
-    internal_status = InternalStatusWidget()
-    tabs.addTab(internal_status.get_widget(), "Internal")
-
-    # Start in fullscreen
-    gui.setCentralWidget(tabs)
-    gui.showMaximized()
 
     # Use a QTimer to update plot, current position, and internal status in the main thread
     def update_gui() -> None:
