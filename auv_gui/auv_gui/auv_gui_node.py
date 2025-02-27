@@ -38,7 +38,8 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Float32
 from vortex_msgs.action import LOSGuidance, NavigateWaypoints, ReferenceFilterWaypoint
-from vortex_utils.python_utils import H264Decoder, euler_to_quat, quat_to_euler
+from vortex_utils.python_utils import euler_to_quat, quat_to_euler
+from vortex_utils.gst_utils import H264Decoder
 
 from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
 
@@ -107,7 +108,7 @@ class GuiNode(Node):
 
         self.image_subscription = self.create_subscription(
             CompressedImage,
-            "/image_compressed",
+            "/flir/image_compressed",
             self.image_callback,
             qos_profile=best_effort_qos,
         )
@@ -150,10 +151,12 @@ class GuiNode(Node):
         )
 
         # Variables for internal status
-        self.current = Queue(maxsize=10)
-        self.voltage = Queue(maxsize=10)
-        self.temperature = Queue(maxsize=10)
-        self.pressure = Queue(maxsize=10)
+        self.current = []
+        self.voltage = []
+        self.temperature = []
+        self.pressure = []
+
+
 
         # --- Waypoint stuff ---
 
@@ -491,23 +494,19 @@ class GuiNode(Node):
 
     def current_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a current message is received."""
-        temp_timestamp = time.time()
-        self.current.put((msg.data, temp_timestamp))
+        self.current.append(msg.data)
 
     def voltage_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a voltage message is received."""
-        temp_timestamp = time.time()
-        self.voltage.put((msg.data, temp_timestamp))
+        self.voltage.append(msg.data)
 
     def temperature_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a temperature message is received."""
-        temp_timestamp = time.time()
-        self.temperature.put((msg.data, temp_timestamp))
+        self.temperature.append(msg.data)
 
     def pressure_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a pressure message is received."""
-        temp_timestamp = time.time()
-        self.pressure.put((msg.data, temp_timestamp))
+        self.pressure.append(msg.data)
 
 
 def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
@@ -711,10 +710,13 @@ def main(args: Optional[list[str]] = None) -> None:
             ros_node.los_points = []
 
         try:
-            current_val = ros_node.current.queue[-1][0]
-            voltage_val = ros_node.voltage.queue[-1][0]
-            temperature_val = ros_node.temperature.queue[-1][0]
-            pressure_val = ros_node.pressure.queue[-1][0]
+            # Get the last values from each list
+            current_val = ros_node.current[-1]
+            voltage_val = ros_node.voltage[-1]
+            temperature_val = ros_node.temperature[-1]
+            pressure_val = ros_node.pressure[-1]
+
+            # Format the status text
             status_text = (
                 f"<b>Internal Status:</b><br>"
                 f"Current: {current_val:.2f} A<br>"
@@ -723,12 +725,8 @@ def main(args: Optional[list[str]] = None) -> None:
                 f"Pressure: {pressure_val:.2f} hPa"
             )
         except IndexError:
+            # In case the lists are empty
             status_text = "<b>Internal Status:</b> Not Available"
-        internal_status_label.setText(status_text)
-
-        internal_status.update(
-            ros_node.current, ros_node.voltage, ros_node.temperature, ros_node.pressure
-        )
 
     timer = QTimer()
     timer.timeout.connect(update_gui)
