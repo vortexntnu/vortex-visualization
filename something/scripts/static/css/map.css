@@ -1,0 +1,20 @@
+.continent {
+	fill: #f0e4dd;
+	stroke: #e0cabc;
+	stroke-width: 0.0;
+}
+
+.water {
+	fill: #c9e8fd;
+	stroke-width: 0.0;
+}
+
+.circles {
+	fill: #3c373d;
+}
+
+.labels {
+	font-family: sans-serif;
+	font-size: 11px;
+	fill: #3c373d;
+}

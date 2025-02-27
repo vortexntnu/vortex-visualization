@@ -1,0 +1,5 @@
+bridge_node:
+  ros__parameters:
+    webserver:
+      host: '0.0.0.0'
+      port: 61200

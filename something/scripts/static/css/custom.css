@@ -1,0 +1,11 @@
+table.fixed {
+	table-layout: fixed;
+}
+
+table.fixed td {
+	overflow: hidden;
+}
+
+table.fixed th {
+	overflow: hidden;
+}

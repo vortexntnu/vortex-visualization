@@ -1,0 +1,1179 @@
+{% extends "base.html" %}
+
+{% block head %}
+
+{% endblock %}
+
+{% block content %}
+<div class="site-section bg-light">
+	<div class="container">
+		<div class="row align-items-stretch retro-layout-2">
+			<div class="col-md-6">
+				<h2>Map</h2>
+				<div id="mapContainer" class="svg-container"></div>
+				<table class="fixed" id="poseTable" style="width:100%">
+					<col width="50em" />
+					<col width="3em" />
+					<col width="10em" />
+					<col width="3em" />
+					<col width="10em" />
+					<col width="3em" />
+					<col width="10em" />
+					<tr>
+						<th>Pose</th>
+						<th style="text-align: right;">N</th>
+						<td style="text-align: right;">0.0</th>
+						<th style="text-align: right;">E</th>
+						<td style="text-align: right;">0.0</th>
+						<th style="text-align: right;">H</th>
+						<td style="text-align: right;">0.0</th>
+					</tr>
+					<tr>
+						<th>Mouse position</th>
+						<th style="text-align: right;">N</th>
+						<td style="text-align: right;">0.0</th>
+						<th style="text-align: right;">E</th>
+						<td style="text-align: right;">0.0</th>
+					</tr>
+				</table>
+			</div>
+			<div class="col-md-3">
+				<div>
+					<h2>Mode</h2>
+					<select id="modeSelector" , onchange="onModeSelect(this.value)">
+						<option value="direct_actuator_control">Direct Actuator Control</option>
+						<option value="automatic_actuator_control">Automatic Actuator Control</option>
+						<option value="joystick">Joystick</option>
+						<option value="dp">DP</option>
+						<option value="docking">Docking</option>
+						<option value="aferry_dp">aFerry DP</option>
+						<option value="aferry_wrench">aFerry Wrench</option>
+						<option value="failure">Failure</option>
+						<option value="transit">Transit</option>
+						<option value="curved_path_following">Curved path following</option>
+						<option value="cbf_based_colav">CBF based colav</option>
+						<option value="psbmpc">PSBMPC</option>
+						<option value="sbmpc">SBMPC</option>
+					</select>
+				</div>
+				<div>
+					<h2>Gamepad</h2>
+					<select id="gamepadSelector" , onchange="gamepadIndex = this.value"></select>
+					<button onclick="calibrateGamepad();">Calibrate</button>
+				</div>
+				<div>
+					<h2>GNSS</h2>
+					<table class="fixed" id='gnssTable' style="width: 100%;">
+						<col width="1em" />
+						<col width="1em" />
+						<col width="1em" />
+						<tr>
+							<th colspan="3">Time</th>
+						</tr>
+						<tr>
+							<td colspan="3">N/A</td>
+						</tr>
+						<tr>
+							<th>Lat</th>
+							<th>Lon</th>
+							<th>Alt</th>
+						</tr>
+						<tr>
+							<td>N/A</td>
+							<td>N/A</td>
+							<td>N/A</td>
+						</tr>
+						<tr>
+							<th># sat</th>
+							<th>HDOP</th>
+							<th>Mode</th>
+						</tr>
+						<tr>
+							<td>N/A</td>
+							<td>N/A</td>
+							<td>N/A</td>
+						</tr>
+						<tr>
+							<th>Speed</th>
+							<th>Course</th>
+							<th>Heading</th>
+						</tr>
+						<tr>
+							<td>N/A</td>
+							<td>N/A</td>
+							<td>N/A</td>
+						</tr>
+						<tr>
+							<th colspan="3">NMEA</th>
+						</tr>
+						<tr>
+							<td colspan="3">N/A</td>
+						</tr>
+					</table>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<h2>Waypoint</h2>
+				<table style="width:100%">
+					<tr>
+						<th>North [m]</th>
+						<th><input id="waypointNorth" type="text" value="0.0" onchange="wpPosChange();"></th>
+					</tr>
+					<tr>
+						<th>East [m]</th>
+						<th><input id="waypointEast" type="text" value="0.0" onchange="wpPosChange();"></th>
+					</tr>
+					<tr>
+						<th>Heading [deg]</th>
+						<th><input id="waypointHeading" type="text" value="0.0"></th>
+					</tr>
+				</table>
+				<input id="setWaypoint" type="submit" value="Set waypoint"
+					onclick="socket.emit('set_waypoint', {'north': waypointNorth.value, 'east': waypointEast.value, 'heading': waypointHeading.value*Math.PI/180})">
+				<input id="importPose" type="submit" value="Import Pose" onclick="importPose();">
+				<br>
+				<select id="wpSelectorList" size="10" onchange="wpSelectorChanged();" onclick="wpSelectorChanged();"
+					style="width: 100%;">
+				</select>
+				<br>
+				Name <input id="wpSelectorName" type="text" name="WaypointName">
+				<button onclick="addWpToList();">Add</button>
+				<button onclick="deleteWpFromList();">Delete</button>
+			</div>
+			<div class="col-md-6">
+				<h2>Velocity</h2>
+				<div class="row">
+					<div class="col">
+						<canvas id="surgeChart" width="400" height="140"></canvas>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						<canvas id="swayChart" width="400" height="140"></canvas>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						<canvas id="yawrateChart" width="400" height="140"></canvas>
+					</div>
+				</div>
+				<!-- <canvas id="velocityChart" width="400" height="400"></canvas> -->
+			</div>
+			<div class="col-md-6">
+				<h2>Thrusters</h2>
+				<div>
+					<table class="fixed" id='tauTable' style='width: 100%'>
+						<col width="20em" />
+						<col width="10em" />
+						<col width="10em" />
+						<col width="10em" />
+						<tr>
+							<th>Control action</th>
+							<th style="text-align: right;">X [N]</th>
+							<th style="text-align: right;">Y [N]</th>
+							<th style="text-align: right;">N [Nm]</th>
+						</tr>
+						<tr>
+							<th>Desired</th>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+						</tr>
+						<tr>
+							<th>Estimated</th>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+						</tr>
+					</table>
+					<table class="fixed" id='thrusterTable' style='width:100%'>
+						<col width="30em" />
+						<col width="15em" />
+						<col width="15em" />
+						<col width="15em" />
+						<col width="15em" />
+						<col width="15em" />
+						<col width="15em" />
+						<col width="15em" />
+						<col width="15em" />
+						<tr>
+							<th>Actuator values</th>
+							<th style="text-align: right;">T1 Speed [rpm]</th>
+							<th style="text-align: right;">T1 Angle [deg]</th>
+							<th style="text-align: right;">T2 Speed [rpm]</th>
+							<th style="text-align: right;">T2 Angle [deg]</th>
+							<th style="text-align: right;">T3 Speed [rpm]</th>
+							<th style="text-align: right;">T3 Angle [deg]</th>
+							<th style="text-align: right;">T4 Speed [rpm]</th>
+							<th style="text-align: right;">T4 Angle [deg]</th>
+						</tr>
+						<tr>
+							<th>Desired</th>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+						</tr>
+						<tr>
+							<th>Actual</th>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+							<td style="text-align: right;">0</td>
+						</tr>
+					</table>
+				</div>
+				<div>
+					<canvas id="thrustCanvas" width="400" height="400">
+						You do not have a canvas enabled browser
+					</canvas>
+				</div>
+				<div>
+					<input type="radio" id="rdBtnRotate" name="rotation" onclick="handleRotationClick(this);" checked>
+					<label for="rdBtnRotate">Rotate</label>
+					<input type="radio" id="rdBtnStatic" name="rotation" onclick="handleRotationClick(this);">
+					<label for="rdBtnStatic">Static</label>
+				</div>
+			</div>
+			<div class="col-md-6">
+				<h2>Heading</h2>
+				<canvas id="poseChart" width="400" height="400"></canvas>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript" charset="utf-8">
+	Chart.defaults.global.elements.line.fill = false;
+	/// VARIABLES
+	// Socket
+	var socket = io();
+
+	// Velocity chart
+	var velocityChartTimeFormat = 'HH:mm:ss.S';
+	var nDataPoints = 120;
+
+	var velocitySurgeOptions = {
+		type: 'line',
+		data: {
+			datasets: [{
+				label: 'Surge [m/s]',
+				borderColor: 'rgba(255, 99, 132, 1)',
+				pointRadius: 0
+			}, {
+				label: 'Desired surge [m/s]',
+				borderColor: 'rgba(255, 99, 132, 1)',
+				pointRadius: 0,
+				borderDash: [1]
+			}]
+		},
+		options: {
+			scales: {
+				xAxes: [{
+					type: 'time',
+					time: {
+						parser: velocityChartTimeFormat,
+						displayFormats: {
+							// year: '',
+							// quarter: '',
+							// month: '',
+							// week: '',
+							day: 'MMM D',
+							hour: 'HH',
+							minute: 'HH:mm',
+							second: 'HH:mm:ss',
+							millisecond: 'HH:mm:ss.S'
+						}
+					},
+					gridLines: false,
+					ticks: {
+						display: false
+					}
+				}],
+				yAxes: [{
+					scaleLabel: {
+						display: true,
+						labelString: 'Surge [m/s]'
+					},
+					ticks: {
+						suggestedMin: -3.0,
+						suggestedMax: 3.0,
+						source: 'data'
+					}
+				}]
+			},
+			animation: {
+				duration: 0
+			},
+			hover: {
+				animationDuration: 0
+			},
+			responsiveAnimationDuration: 0,
+			legend: {
+				display: false
+			}
+		}
+	};
+	var velocitySwayOptions = objectJsonCopy(velocitySurgeOptions);
+	var velocityYawrateOptions = objectJsonCopy(velocitySurgeOptions);
+
+	var surgeChart = new Chart(document.getElementById('surgeChart').getContext('2d'), velocitySurgeOptions);
+	var swayChart = new Chart(document.getElementById('swayChart').getContext('2d'), velocitySwayOptions);
+	var yawrateChart = new Chart(document.getElementById('yawrateChart').getContext('2d'), velocityYawrateOptions);
+
+	// Pose Chart
+	var poseChartTimeFormat = 'HH:mm:ss.S';
+	var poseCtx = document.getElementById('poseChart').getContext('2d');
+	var poseChart = new Chart(poseCtx, {
+		type: 'line',
+		data: {
+			datasets: [{
+				label: "Heading [m/s]",
+				borderColor: "rgba(255, 206, 86, 1)",
+				pointRadius: 0
+			}, {
+				label: "Heading desired [m/s]",
+				borderColor: "rgba(255, 206, 86, 1)",
+				pointRadius: 0,
+				borderDash: [1]
+			}]
+		},
+		options: {
+			scales: {
+				xAxes: [{
+					type: 'time',
+					time: {
+						parser: poseChartTimeFormat,
+						displayFormats: {
+							// year: '',
+							// quarter: '',
+							// month: '',
+							// week: '',
+							day: 'MMM D',
+							hour: 'HH',
+							minute: 'HH:mm',
+							second: 'HH:mm:ss',
+							millisecond: 'HH:mm:ss.S'
+						}
+					},
+					gridLines: false,
+					ticks: {
+						display: false
+					}
+				}],
+				yAxes: [{
+					scaleLabel: {
+						display: true,
+						labelString: 'Heading [deg]'
+					},
+					ticks: {
+						suggestedMin: -180.0,
+						suggestedMax: 180.0,
+						source: 'data'
+					}
+				}]
+			},
+			animation: {
+				duration: 0 // general animation time
+			},
+			hover: {
+				animationDuration: 0 // duration of animations when hovering an item
+			},
+			responsiveAnimationDuration: 0 // animation duration after a resize
+		}
+	});
+
+	function shiftIf(array, n) {
+		while (array.length > n) {
+			array.shift();
+		}
+	}
+
+	socket.on('eta_desired', function (msg) {
+		var t = getTime();
+
+
+		poseChart.data.datasets[1].data.push({
+			t: t,
+			y: msg.heading * 180 / Math.PI
+		});
+		shiftIf(poseChart.data.datasets[1].data, nDataPoints);
+		poseChart.update();
+	});
+
+	// Gamepad
+	var gamepadIndex = -1;
+	var gpAxesCalibration = null;
+
+	// Map
+	var mapWidth = 400;
+	var mapHeight = 400;
+	var mapSvg = d3.select("div#mapContainer")
+		.append("svg")
+		.attr("preserveAspectRatio", "xMinYMin meet")
+		.style("background-color", "black")
+		.attr("viewBox", "0 0 " + mapWidth + " " + mapHeight)
+		.classed("svg-content", true)
+		.attr("width", "100%")
+		.attr("height", "100%")
+		.attr('transform', 'rotate(-90 0 0)')
+		.call(d3.zoom().on("zoom", function () {
+			mapSvg.attr("transform", d3.event.transform)
+		}))
+		.append("g");
+
+	var mapWaterPolygon = {
+		'points': [{
+			'x': -1.e+6,
+			'y': -1.e+6
+		},
+		{
+			'x': -1.e+6,
+			'y': 1.e+6
+		},
+		{
+			'x': 1.e+6,
+			'y': 1.e+6
+		},
+		{
+			'x': 1.e+6,
+			'y': -1.e+6
+		}
+		]
+	};
+	var mapVesselPolyData = {
+		'id': 'vesselPoly',
+		"points": [{
+			"x": 5.1 / 2,
+			"y": 2.9 / 2
+		},
+		{
+			"x": 5.1 / 2,
+			"y": -2.9 / 2
+		},
+		{
+			"x": -5.1 / 2,
+			"y": -2.9 / 2
+		},
+		{
+			"x": -5.1 / 2,
+			"y": 2.9 / 2
+		}
+		],
+		"color": "black"
+	};
+	var mapArrowPolyData = {
+		'id': 'arrowPoly',
+		"points": [{
+			"x": 1.0,
+			"y": 0.0
+		},
+		{
+			"x": -1.0,
+			"y": -0.8
+		},
+		{
+			"x": -0.5,
+			"y": -0.0
+		},
+		{
+			"x": -1.0,
+			"y": 0.8
+		}
+		],
+		"color": "white"
+	};
+
+	// Waypoint
+	var waypointDict = {};
+
+
+	function objectJsonCopy(src) {
+		return JSON.parse(JSON.stringify(src));
+	}
+
+	// Thruster visualization
+	var thrusterHeading = 0;
+
+	velocitySwayOptions.data.datasets[0].label = 'Sway [m/s]';
+	velocitySwayOptions.data.datasets[0].borderColor = 'rgba(54, 162, 235, 1)';
+	velocitySwayOptions.data.datasets[1].label = 'Desired sway [m/s]';
+	velocitySwayOptions.data.datasets[1].borderColor = 'rgba(54, 162, 235, 1)';
+	velocitySwayOptions.options.scales.yAxes[0].scaleLabel.labelString = 'Sway [m/s]';
+
+	velocityYawrateOptions.data.datasets[0].label = 'Yaw rate [deg/s]';
+	velocityYawrateOptions.data.datasets[0].borderColor = 'rgba(255, 206, 86, 1)';
+	velocityYawrateOptions.data.datasets[1].label = 'Desired yaw rate [m/s]';
+	velocityYawrateOptions.data.datasets[1].borderColor = 'rgba(255, 206, 86, 1)';
+	velocityYawrateOptions.options.scales.yAxes[0].scaleLabel.labelString = 'Yaw rate [deg/s]';
+	velocityYawrateOptions.options.scales.yAxes[0].ticks.suggestedMin = -10.;
+	velocityYawrateOptions.options.scales.yAxes[0].ticks.suggestedMax = 10.;
+
+
+
+	function getTime() {
+		return moment().format(velocityChartTimeFormat);
+	}
+
+	socket.on("nu", function (msg) {
+		var t = getTime();
+
+		surgeChart.data.datasets[0].data.push({
+			t: t,
+			y: msg.surge
+		});
+		shiftIf(surgeChart.data.datasets[0].data, nDataPoints);
+		surgeChart.update();
+
+		swayChart.data.datasets[0].data.push({
+			t: t,
+			y: msg.sway
+		});
+		shiftIf(swayChart.data.datasets[0].data, nDataPoints);
+		swayChart.update();
+
+		yawrateChart.data.datasets[0].data.push({
+			t: t,
+			y: msg.yaw * 180 / Math.PI
+		});
+		shiftIf(yawrateChart.data.datasets[0].data, nDataPoints);
+		yawrateChart.update();
+	});
+
+	socket.on('nu_desired', function (msg) {
+		var t = getTime();
+
+		surgeChart.data.datasets[1].data.push({
+			t: t,
+			y: msg.surge
+		});
+		shiftIf(surgeChart.data.datasets[1].data, nDataPoints);
+		surgeChart.update();
+
+		swayChart.data.datasets[1].data.push({
+			t: t,
+			y: msg.sway
+		});
+		shiftIf(swayChart.data.datasets[1].data, nDataPoints);
+		swayChart.update();
+
+		yawrateChart.data.datasets[1].data.push({
+			t: t,
+			y: msg.yaw * 180 / Math.PI
+		});
+		shiftIf(yawrateChart.data.datasets[1].data, nDataPoints);
+		yawrateChart.update();
+	});
+
+	/// HANDLE MODE SELECTION
+
+	socket.on("mode", function (msg) {
+		var mode = document.getElementById('modeSelector').value = msg;
+	});
+
+	function onModeSelect(value) {
+		socket.emit("mode_select", value);
+	}
+
+	/// HANDLE GAMEPADS
+
+	function removeOptions(selectbox) {
+		var i;
+		for (i = selectbox.options.length - 1; i >= 0; i--) {
+			selectbox.remove(i);
+		}
+	}
+
+	function gamepadHandler(event, connecting) {
+		var gamepads = navigator.getGamepads();
+		var select = document.getElementById("gamepadSelector");
+		removeOptions(select);
+		select.options[0] = new Option("-- No Gamepad --", -1);
+		for (var i = 0; i < gamepads.length; i++) {
+			if (gamepads[i] != null) {
+				select.options[i + 1] = new Option(gamepads[i].id, i);
+			}
+		}
+	}
+
+	window.addEventListener("gamepadconnected", function (e) {
+		gamepadHandler(e, true);
+	}, false);
+	window.addEventListener("gamepaddisconnected", function (e) {
+		gamepadHandler(e, false);
+	}, false);
+	gamepadHandler(0, false);
+
+	setInterval(pollGamepads, 200);
+
+	function pollGamepads() {
+		var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+		var gp = gamepads[gamepadIndex];
+		if (gp) {
+			socket.emit("gamepad_event", {
+				axes: {
+					values: gp.axes,
+					calibration: gpAxesCalibration
+				}
+			});
+			// console.log(gp);
+		}
+	}
+
+	function calibrateGamepad() {
+		var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+		var gp = gamepads[gamepadIndex];
+		if (gp) {
+			gpAxesCalibration = gp.axes;
+			console.log('Calibrated gamepad');
+			console.log(gpAxesCalibration);
+		}
+	}
+
+	/// MAP
+	mapSvg.append('g').selectAll('polygon')
+		.data([mapWaterPolygon])
+		.enter()
+		.append('polygon')
+		.attr('points', function (d) {
+			return d.points.map(function (d) {
+				return [d.x, d.y].join(",");
+			}).join(" ");
+		})
+		// .attr('class', 'water');
+		.style('fill', '#c9e8fd');
+
+	continentGroup = mapSvg.append('g');
+	continentGroup.attr('id', 'continentGroup');
+
+	d3.json('static/maps/land_ned.json').then(function (data) {
+		path = d3.geoPath();
+		continentGroup.selectAll('path')
+			.data(data.features)
+			.enter()
+			.append('path')
+			.attr('class', 'continent')
+			.attr('d', path);
+	});
+
+	// Draw vessel
+
+	function updateShipPolygon(polygon, N, E, H) {
+		polygon.attr('points', function (d) {
+			return d.points.map(function (d) {
+				return [
+					N + d.x * Math.cos(H) - d.y * Math.sin(H),
+					E + d.x * Math.sin(H) + d.y * Math.cos(H)
+				].join(',');
+			}).join(' ');
+		});
+	}
+
+	// Selection circle
+	mapSvg.append('g')
+		.append('circle')
+		.attr('cx', 0)
+		.attr('cy', 0)
+		.attr('r', 3)
+		.attr('fill', 'red')
+		.attr('visibility', 'hidden')
+		.attr('id', 'selectionCircle');
+
+	mapSvg.append("g").selectAll("polygon")
+		.data([mapVesselPolyData, mapArrowPolyData])
+		.enter().append("polygon")
+		.attr("points", function (d) {
+			return d.points.map(function (d) {
+				return [d.x, d.y].join(",");
+			}).join(" ");
+		})
+		.attr("stroke", function (d) {
+			return d.color;
+		})
+		.attr("stroke-width", 1)
+		.attr('id', function (d) {
+			return d.id;
+		});
+
+	function plotVesselPosition(N, E, H) {
+		var polygonVessel = mapSvg.select('#vesselPoly');
+		var polygonArrow = mapSvg.select('#arrowPoly');
+		updateShipPolygon(polygonVessel, N, E, H);
+		updateShipPolygon(polygonArrow, N, E, H);
+	}
+
+
+	mapSvg.on('click', function () {
+		coords = d3.mouse(this);
+		document.getElementById('waypointNorth').value = coords[0].toFixed(2);
+		document.getElementById('waypointEast').value = coords[1].toFixed(2);
+		wpPosChange();
+	});
+
+	mapSvg.on('contextmenu', function () {
+		d3.event.preventDefault();
+		circ = mapSvg.select('#selectionCircle');
+		circ.attr('visibility', 'hidden');
+	});
+
+
+	var retrievedWaypointDict = getCookie('waypointDict').toString();
+	if (retrievedWaypointDict) {
+		retrievedWaypointDict = JSON.parse(retrievedWaypointDict);
+		if (retrievedWaypointDict) {
+			waypointDict = retrievedWaypointDict;
+		}
+	}
+
+	function updateWpSelector() {
+		var select = document.getElementById('wpSelectorList');
+
+		// Clear select list
+		for (i = select.length; i >= 0; i--) {
+			select.options[i] = null;
+		}
+
+		// Populate list
+		for (var key in waypointDict) {
+			var value = waypointDict[key];
+			var option = document.createElement('option');
+			option.value = 'wpId:' + key;
+			option.text = 'N' + value.north.toFixed(2) + ' E' + value.east.toFixed(2) + ' H' + (value.heading * 180 / Math.PI).toFixed(2);
+			if (value.name) {
+				option.text = value.name + ': ' + option.text;
+			}
+			select.add(option);
+		}
+	}
+	updateWpSelector();
+
+	function addWpToList() {
+		var north = parseFloat(document.getElementById('waypointNorth').value);
+		var east = parseFloat(document.getElementById('waypointEast').value);
+		var heading = parseFloat(document.getElementById('waypointHeading').value) * Math.PI / 180;
+		var name = document.getElementById('wpSelectorName').value;
+		var timestampHash = (+new Date).toString(36);
+
+		if (!isNaN(north) && !isNaN(east) && !isNaN(heading)) {
+			if (true || name) {
+				waypointDict[timestampHash] = {
+					id: timestampHash,
+					name: name,
+					north: north,
+					east: east,
+					heading: heading
+				};
+				updateWpSelector();
+				updateWaypointDict();
+			} else {
+				console.log('Waypoint must have a name');
+			}
+		} else {
+			console.log('Waypoint data must be a number.');
+		}
+	}
+
+	function deleteWpFromList() {
+		var select = document.getElementById('wpSelectorList');
+		if (select.selectedIndex >= 0) {
+			option = select.options[select.selectedIndex];
+			id = option.value.slice(5);
+			delete waypointDict[id];
+			updateWpSelector();
+			updateWaypointDict();
+		}
+	}
+
+	function wpPosChange() {
+		north = parseFloat(document.getElementById('waypointNorth').value);
+		east = parseFloat(document.getElementById('waypointEast').value);
+		if (!isNaN(north) && !isNaN(east)) {
+			circ = mapSvg.select('#selectionCircle');
+			circ.attr('visibility', 'visible')
+				.attr('cx', north)
+				.attr('cy', east);
+		}
+	}
+
+	function wpSelectorChanged() {
+		var select = document.getElementById('wpSelectorList');
+		if (select.selectedIndex >= 0) {
+			option = select.options[select.selectedIndex];
+			id = option.value.slice(5);
+			waypoint = waypointDict[id];
+			document.getElementById('waypointNorth').value = waypoint.north.toFixed(2);
+			document.getElementById('waypointEast').value = waypoint.east.toFixed(2);
+			document.getElementById('waypointHeading').value = (waypoint.heading * 180 / Math.PI).toFixed(2);
+			document.getElementById('wpSelectorName').value = waypoint.name;
+			wpPosChange();
+		}
+	}
+
+	function setCookie(cname, cvalue, exdays) {
+		var d = new Date();
+		d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+		var expires = "expires=" + d.toUTCString();
+		document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+	}
+
+	function getCookie(cname) {
+		var name = cname + "=";
+		var decodedCookie = decodeURIComponent(document.cookie);
+		var ca = decodedCookie.split(';');
+		for (var i = 0; i < ca.length; i++) {
+			var c = ca[i];
+			while (c.charAt(0) == ' ') {
+				c = c.substring(1);
+			}
+			if (c.indexOf(name) == 0) {
+				return c.substring(name.length, c.length);
+			}
+		}
+		return "";
+	}
+
+	function updateWaypointDict() {
+		setCookie('waypointDict', JSON.stringify(waypointDict), 3653); // Store cookie for 3653 days (10 years)
+	}
+
+	pose = [0, 0, 0];
+
+	socket.on("eta", function (msg) {
+		plotVesselPosition(msg.north, msg.east, msg.heading);
+		thrusterHeading = msg.heading;
+		var table = document.getElementById("poseTable");
+		pose[0] = msg.north;
+		pose[1] = msg.east;
+		pose[2] = msg.heading;
+		table.rows[0].cells[2].innerHTML = msg.north.toFixed(2);
+		table.rows[0].cells[4].innerHTML = msg.east.toFixed(2);
+		table.rows[0].cells[6].innerHTML = (msg.heading / Math.PI * 180).toFixed(2);
+
+		var t = getTime();
+		poseChart.data.datasets[0].data.push({
+			t: t,
+			y: msg.heading * 180 / Math.PI
+		});
+		shiftIf(poseChart.data.datasets[0].data, nDataPoints);
+		poseChart.update();
+	});
+
+	mapSvg.on('mousemove', function () {
+		var coords = d3.mouse(this);
+		var table = document.getElementById('poseTable');
+		table.rows[1].cells[2].innerHTML = (Math.round(coords[0] * 100) / 100).toFixed(2);
+		table.rows[1].cells[4].innerHTML = (Math.round(coords[1] * 100) / 100).toFixed(2);
+	})
+
+	// Draw path
+	var waypointPathFunction = d3.line()
+		.x(function (d) {
+			return d.x;
+		})
+		.y(function (d) {
+			return d.y;
+		})
+		.curve(d3.curveLinear);
+
+	mapSvg.append('g').append('path')
+		.attr('id', 'waypointCurve')
+		.style('stroke-width', 1)
+		.style('stroke', 'purple')
+		.style('stroke-dasharray', 2)
+		.style('fill', 'none');
+
+	function plotWaypointPath(curveData) {
+		var path = mapSvg.select('#waypointCurve');
+		path.attr('d', waypointPathFunction(curveData));
+	}
+
+	// Draw mpc curve
+	var mpcCurveFunction = d3.line()
+		.x(function (d) {
+			return d.x;
+		})
+		.y(function (d) {
+			return d.y;
+		})
+		.curve(d3.curveNatural);
+
+	mapSvg.append('g').append('path')
+		.attr('id', 'mpcCurve')
+		.style('stroke-width', 1)
+		.style('stroke', 'blue')
+		.style('stroke-dasharray', 2)
+		.style('fill', 'none');
+
+	function plotMpcCurve(curveData) {
+		var path = mapSvg.select('#mpcCurve');
+		path.attr('d', mpcCurveFunction(curveData));
+	}
+
+	socket.on('mpc_path', function (msg) {
+		plotMpcCurve(msg);
+	})
+
+	socket.on('trajectory', function (msg) {
+		plotMpcCurve(msg);
+	})
+
+	socket.on('planned_path', function (msg) {
+		plotWaypointPath(msg);
+	})
+
+	// Draw convex set
+	mapSvg.append('g').append('path')
+		.attr('id', 'convexSetCurve')
+		.style('stroke-width', 1)
+		.style('stroke', 'black')
+		.style('fill', 'none');
+
+	var convexSetCurveFunction = d3.line()
+		.x(function (d) {
+			return d.x;
+		})
+		.y(function (d) {
+			return d.y;
+		});
+
+	function plotConvexSet(vertices) {
+		var path = mapSvg.select('#convexSetCurve');
+		path.attr('d', convexSetCurveFunction(vertices));
+	}
+
+	socket.on('convex_set_vertices', function (msg) {
+		plotConvexSet(msg);
+	})
+
+	/// THRUSTER VISUALIZATION
+
+	var performHeadingRotation = true;
+	switch (performHeadingRotation) {
+		case true:
+			document.getElementById('rdBtnRotate').checked = true;
+			break;
+		case false:
+			document.getElementById('rdBtnStatic').checked = true;
+	}
+
+	function handleRotationClick(radio) {
+		switch (radio.id) {
+			case 'rdBtnRotate':
+				performHeadingRotation = true;
+				break;
+			case 'rdBtnStatic':
+				performHeadingRotation = false;
+				break;
+			default:
+				console.log('Error! Unknown radio button id: `' + radio.id + '`');
+		}
+	}
+
+	var vesselCanvas = document.getElementById('thrustCanvas');
+	var vcx = vesselCanvas.getContext('2d');
+	var vch = vesselCanvas.height;
+	var vcw = vesselCanvas.width;
+
+	vcx.translate(200, 200);
+	vcx.transform(0, -1, 1, 0, 0, 0);
+	vcx.save();
+
+	function drawVessel() {
+		// Draw vessel outline
+		// vcx.save();
+		var scale = 35;
+		vcx.beginPath();
+		vcx.moveTo(4 * scale, 3 * scale);
+		vcx.lineTo(-4 * scale, 3 * scale);
+		vcx.lineTo(-5 * scale, 2 * scale);
+		vcx.lineTo(-5 * scale, -2 * scale);
+		vcx.lineTo(-4 * scale, -3 * scale);
+		vcx.lineTo(4 * scale, -3 * scale);
+		vcx.lineTo(5 * scale, -2 * scale);
+		vcx.lineTo(5 * scale, 2 * scale);
+		vcx.closePath();
+		vcx.lineWidth = 3;
+		vcx.stroke();
+
+		// fill inn vessel with color
+		vcx.fillStyle = "rgba(0, 0, 255, 0.7)";
+		vcx.fill();
+
+		vcx.beginPath();
+		vcx.moveTo(5 * scale, 0 * scale);
+		vcx.lineTo(4 * scale, -1 * scale);
+		vcx.lineTo(4 * scale, 1 * scale);
+		vcx.closePath();
+		vcx.lineWidth = 1;
+		vcx.stroke();
+		vcx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+		vcx.fill();
+	}
+
+
+	function drawThruster(x, y, magnitude, angle) {
+		vcx.translate(x, y);
+		vcx.rotate(angle);
+
+		vcx.beginPath();
+		vcx.moveTo(0, 0);
+		vcx.bezierCurveTo(5, 0, 5, 30, 0, 30)
+		vcx.bezierCurveTo(-5, 30, -5, 0, 0, 0)
+		vcx.bezierCurveTo(5, 0, 5, -30, 0, -30)
+		vcx.bezierCurveTo(-5, -30, -5, 0, 0, 0)
+		vcx.closePath();
+		vcx.lineWidth = 1;
+		vcx.fillStyle = "rgba(128, 128, 128)";
+		vcx.fill();
+		vcx.stroke();
+
+		vcx.beginPath();
+		vcx.moveTo(10, 0);
+		vcx.lineTo(3, -10);
+		vcx.lineTo(3, 10);
+		vcx.closePath();
+		vcx.lineWidth = 1;
+		vcx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+		vcx.stroke();
+		vcx.fill();
+
+		var headlen = Math.sign(magnitude) * 10;
+		vcx.beginPath();
+		vcx.moveTo(0, 0);
+		vcx.lineTo(magnitude, 0);
+		vcx.lineTo(magnitude - headlen / 2, headlen / 2)
+		vcx.lineTo(magnitude - headlen / 2, -headlen / 2)
+		vcx.lineTo(magnitude, 0);
+		vcx.fillStyle = "rgba(0, 0, 0)";
+		vcx.fill();
+		vcx.lineWidth = 1;
+		vcx.stroke();
+
+		vcx.rotate(-angle);
+		vcx.translate(-x, -y);
+	}
+
+	function drawMilliampere(H, force1, a1, force2, a2,force3, a3,force4, a4) {
+		vcx.setTransform(1, 0, 0, 1, 0, 0);
+		vcx.clearRect(0, 0, vcw, vch);
+		vcx.restore();
+		vcx.save();
+
+		if (performHeadingRotation) {
+			vcx.rotate(H);
+		}
+
+		drawVessel();
+		drawThruster(100, 50, force1 / 3, a1); // thruster 1 (FP)
+		drawThruster(100, -50, force2 / 3, a2); // thruster 1 (FS)
+		drawThruster(-100, -50, force3 / 3, a3); // thruster 1 (AS)
+		drawThruster(-100, 50, force4 / 3, a4); // thruster 1 (AP)
+
+		//drawThruster(100, 0, force1 / 3, a1);  //old trusters
+		//drawThruster(-100, 0, force2 / 3, a2);
+	}
+
+	function importPose() {
+		document.getElementById('waypointNorth').value = pose[0].toFixed(2);
+		document.getElementById('waypointEast').value = pose[1].toFixed(2);
+		document.getElementById('waypointHeading').value = (pose[2] * 180 / Math.PI).toFixed(2);
+		wpPosChange();
+	}
+
+	socket.on('actuator_reference', function (msg) {
+		// Update table
+		table = document.getElementById('thrusterTable');
+		table.rows[1].cells[1].innerHTML = msg['actuator_1']['propeller'].toFixed(0)
+		table.rows[1].cells[2].innerHTML = (msg['actuator_1']['angle'] * 180 / Math.PI).toFixed(1)
+		table.rows[1].cells[3].innerHTML = msg['actuator_2']['propeller'].toFixed(0)
+		table.rows[1].cells[4].innerHTML = (msg['actuator_2']['angle'] * 180 / Math.PI).toFixed(1)
+		table.rows[1].cells[5].innerHTML = msg['actuator_3']['propeller'].toFixed(0)
+		table.rows[1].cells[6].innerHTML = (msg['actuator_3']['angle'] * 180 / Math.PI).toFixed(1)
+		table.rows[1].cells[7].innerHTML = msg['actuator_4']['propeller'].toFixed(0)
+		table.rows[1].cells[8].innerHTML = (msg['actuator_4']['angle'] * 180 / Math.PI).toFixed(1)
+	});
+
+	socket.on('control_action_reference', function (msg) {
+		table = document.getElementById('tauTable');
+		table.rows[1].cells[1].innerHTML = msg['X'].toFixed(0);
+		table.rows[1].cells[2].innerHTML = msg['Y'].toFixed(0);
+		table.rows[1].cells[3].innerHTML = msg['N'].toFixed(0);
+	});
+
+
+	socket.on("actuator_state", function (msg) {
+		// Update table
+		table = document.getElementById('thrusterTable');
+		table.rows[2].cells[1].innerHTML = msg['actuator_1']['propeller'].toFixed(0);
+		table.rows[2].cells[2].innerHTML = (msg['actuator_1']['angle'] * 180 / Math.PI).toFixed(1);
+		table.rows[2].cells[3].innerHTML = msg['actuator_2']['propeller'].toFixed(0);
+		table.rows[2].cells[4].innerHTML = (msg['actuator_2']['angle'] * 180 / Math.PI).toFixed(1);
+		table.rows[2].cells[5].innerHTML = msg['actuator_3']['propeller'].toFixed(0);
+		table.rows[2].cells[6].innerHTML = (msg['actuator_3']['angle'] * 180 / Math.PI).toFixed(1);
+		table.rows[2].cells[7].innerHTML = msg['actuator_4']['propeller'].toFixed(0);
+		table.rows[2].cells[8].innerHTML = (msg['actuator_4']['angle'] * 180 / Math.PI).toFixed(1);
+
+		drawMilliampere(thrusterHeading,
+			msg["actuator_1"]["force"],
+			msg["actuator_1"]["angle"],
+			msg["actuator_2"]["force"],
+			msg["actuator_2"]["angle"],
+			msg["actuator_3"]["force"],
+			msg["actuator_3"]["angle"],
+			msg["actuator_4"]["force"],
+			msg["actuator_4"]["angle"]
+		);
+	});
+
+	socket.on('estimated_tau', function (msg) {
+		table = document.getElementById('tauTable');
+		table.rows[2].cells[1].innerHTML = msg['X'].toFixed(0);
+		table.rows[2].cells[2].innerHTML = msg['Y'].toFixed(0);
+		table.rows[2].cells[3].innerHTML = msg['N'].toFixed(0);
+	});
+
+
+	socket.on('shutdown', function (msg) {
+		console.log('Got shutdown signal. Sending shutdown_return.');
+		socket.emit("shutdown_return", {});
+	})
+
+	socket.on('vector_fix', function (msg) {
+		table = document.getElementById('gnssTable');
+		table.rows[1].cells[0].innerHTML = msg['sat_time'];
+		table.rows[3].cells[0].innerHTML = msg['latitude'].toFixed(6);
+		table.rows[3].cells[1].innerHTML = msg['longitude'].toFixed(6);
+		table.rows[3].cells[2].innerHTML = msg['altitude'].toFixed(1);
+		table.rows[5].cells[0].innerHTML = msg['numSat'];
+		table.rows[5].cells[1].innerHTML = msg['hDOP'].toFixed(2);
+		table.rows[5].cells[2].innerHTML = msg['mode'];
+	});
+
+	socket.on('vector_velocity', function (msg) {
+		table = document.getElementById('gnssTable');
+		table.rows[7].cells[0].innerHTML = msg['speed'].toFixed(2);
+		table.rows[7].cells[1].innerHTML = msg['course'].toFixed(1);
+	});
+
+	socket.on('vector_heading', function (msg) {
+		table = document.getElementById('gnssTable');
+		table.rows[7].cells[2].innerHTML = msg['heading'].toFixed(1);
+	});
+
+	socket.on('vector_raw', function (msg) {
+		table = document.getElementById('gnssTable');
+		table.rows[9].cells[0].innerHTML = msg['NMEA'];
+	});
+
+</script>
+{% endblock %}

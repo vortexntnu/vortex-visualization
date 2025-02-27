@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block head %}
+
+{% endblock %}
+
+{% block content %}
+<div class="site-section bg-light">
+	<div class="container">
+		<div class="row align-items-stretch retro-layout-2">
+			<div class="col-md-6">
+				<h2>Map:</h2>
+				<div id="mapContainer" class="svg-container"></div>
+				<table id="poseTable" style="width:100%">
+					<tr>
+						<th>North:</th>
+						<th>0.0</th>
+						<th>East:</th>
+						<th>0.0</th>
+						<th>Heading:</th>
+						<th>0.0</th>
+					</tr>
+				</table>
+			</div>
+			<div class="col-md-6">
+				<h2>Velocity:</h2>
+				<canvas id="velocityChart" width="400" height="400"></canvas>
+			</div>
+			<div class="col-md-6">
+				<h2>Thrusters:</h2>
+				<canvas id="thrustCanvas" width="400" height="400">
+					You do not have a canvas enabled browser
+				</canvas>
+			</div>
+			<div class="col-md-3">
+				<h2>Mode:</h2>
+				<select id="modeSelector" , onchange="onModeSelect(this.value)">
+					<option value="direct_actuator_control">Direct Actuator Control</option>
+					<option value="automatic_actuator_control">Automatic Actuator Control</option>
+					<option value="joystick">Joystick</option>
+					<option value="dp">DP</option>
+					<option value="docking">Docking</option>
+					<option value="aferry_dp">aFerry DP</option>
+					<option value="aferry_wrench">aFerry Wrench</option>
+					<option value="failure">Failure</option>
+					<option value="transit">Transit</option>
+					<option value="psbmpc">PSBMPC</option>
+					<option value="sbmpc">SBMPC</option>
+				</select>
+				<br><br>
+				<h2>Gamepad:</h2>
+				<select id="gamepadSelector" , onchange="gamepadIndex = this.value"></select>
+			</div>
+			<div class="col-md-3">
+				<h2>Waypoint:</h2>
+				<table style="width:100%">
+					<tr>
+						<th>North [m]:</th>
+						<th><input id="waypointNorth" type="text" value="0.0"></th>
+					</tr>
+					<tr>
+						<th>East [m]:</th>
+						<th><input id="waypointEast" type="text" value="0.0"></th>
+					</tr>
+					<tr>
+						<th>Heading [deg]:</th>
+						<th><input id="waypointHeading" type="text" value="0.0"></th>
+					</tr>
+				</table>
+				<input id="setWaypoint" type="submit" value="Set waypoint"
+					onclick="socket.emit('set_waypoint', {'north': waypointNorth.value, 'east': waypointEast.value, 'heading': waypointHeading.value*Math.PI/180})">
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript" charset="utf-8">
+	var ctx = document.getElementById('velocityChart').getContext('2d');
+	var velocityChart = new Chart(ctx, {
+		type: 'line',
+		data: {
+			datasets: [{
+				label: "Surge [m/s]",
+				borderColor: "rgba(255, 99, 132, 1)"
+			}, {
+				label: "Sway [m/s]",
+				borderColor: "rgba(54, 162, 235, 1)"
+			}, {
+				label: "Yaw [rad/s]",
+				borderColor: "rgba(255, 206, 86, 1)"
+			}]
+		},
+		options: {
+			animation: {
+				duration: 0 // general animation time
+			},
+			hover: {
+				animationDuration: 0 // duration of animations when hovering an item
+			},
+			responsiveAnimationDuration: 0 // animation duration after a resize
+		}
+	});
+
+	var socket = io();
+
+	socket.on("nu", function (msg) {
+		velocityChart.data.datasets[0].data.push(msg.surge);
+		velocityChart.data.datasets[0].data = velocityChart.data.datasets[0].data.slice(-120);
+		velocityChart.data.datasets[1].data.push(msg.sway);
+		velocityChart.data.datasets[1].data = velocityChart.data.datasets[1].data.slice(-120);
+		velocityChart.data.datasets[2].data.push(msg.yaw);
+		velocityChart.data.datasets[2].data = velocityChart.data.datasets[2].data.slice(-120);
+
+		velocityChart.data.labels.push(new Date().toLocaleTimeString());
+		velocityChart.data.labels = velocityChart.data.labels.slice(-120);
+
+		velocityChart.update()
+	});
+
+	socket.on("mode", function (msg) {
+		var mode = document.getElementById('modeSelector').value = msg;
+	});
+
+	function onModeSelect(value) {
+		socket.emit("mode_select", value);
+	}
+
+
+	var w = 400;
+	var h = 400;
+	var svg = d3.select("div#mapContainer").append("svg").attr("preserveAspectRatio", "xMinYMin meet").style("background-color", "#c9e8fd")
+		.attr("viewBox", "0 0 " + w + " " + h)
+		.classed("svg-content", true)
+		.attr("width", "100%")
+		.attr("height", "100%")
+		.attr('transform', 'rotate(-90 0 0)')
+		.call(d3.zoom().on("zoom", function () {
+			svg.attr("transform", d3.event.transform)
+		}))
+		.append("g");
+
+	var path = d3.geoPath();
+
+	// load data
+	var worldmap = d3.json("static/maps/land_ned.json");
+
+	Promise.all([worldmap]).then(function (values) {
+		// draw map
+		svg.append("g").selectAll("path")
+			.data(values[0].features)
+			.enter()
+			.append("path")
+			.attr("class", "continent")
+			.attr("d", path);
+	});
+
+	// Draw vessel
+	var vesselPoly = {
+		"points": [{
+			"x": 5.1 / 2,
+			"y": 2.9 / 2
+		},
+		{
+			"x": 5.1 / 2,
+			"y": -2.9 / 2
+		},
+		{
+			"x": -5.1 / 2,
+			"y": -2.9 / 2
+		},
+		{
+			"x": -5.1 / 2,
+			"y": 2.9 / 2
+		}
+		],
+		"color": "black"
+	};
+	var arrowPoly = {
+		"points": [{
+			"x": 1.0,
+			"y": 0.0
+		},
+		{
+			"x": -1.0,
+			"y": -0.8
+		},
+		{
+			"x": -0.5,
+			"y": -0.0
+		},
+		{
+			"x": -1.0,
+			"y": 0.8
+		}
+		],
+		"color": "white"
+	};
+
+
+
+	svg.append("g").selectAll("polygon")
+		.data([vesselPoly, arrowPoly])
+		.enter().append("polygon")
+		.attr("points", function (d) {
+			return d.points.map(function (d) {
+				return [d.x, d.y].join(",");
+			}).join(" ");
+		})
+		.attr("stroke", function (d) {
+			return d.color
+		})
+		.attr("stroke-width", 1);
+
+	function plotVesselPosition(N, E, H) {
+		var poly = svg.select("g").selectAll("polygon").data([vesselPoly, arrowPoly]);
+		poly.exit().remove();
+		poly.enter().append("polygon").attr("stroke-width", 0);
+		poly.transition()
+			.duration(0)
+			.attr("points", function (d) {
+				return d.points.map(function (d) {
+					return [N + d.x * Math.cos(H) - d.y * Math.sin(H), E + d.x * Math.sin(H) + d.y * Math.cos(H)].join(",");
+				}).join(" ");
+			});
+	}
+
+	socket.on("eta", function (msg) {
+		plotVesselPosition(msg.north, msg.east, msg.heading);
+		var table = document.getElementById("poseTable");
+		table.rows[0].cells[1].innerHTML = msg.north.toFixed(2);
+		table.rows[0].cells[3].innerHTML = msg.east.toFixed(2);
+		table.rows[0].cells[5].innerHTML = (msg.heading / Math.PI * 180).toFixed(2);
+	});
+
+
+	// Code for handeling gamepads
+	var gamepadIndex = -1
+
+	function removeOptions(selectbox) {
+		var i;
+		for (i = selectbox.options.length - 1; i >= 0; i--) {
+			selectbox.remove(i);
+		}
+	}
+
+	function gamepadHandler(event, connecting) {
+		var gamepads = navigator.getGamepads();
+		var select = document.getElementById("gamepadSelector");
+		removeOptions(select);
+		select.options[0] = new Option("-- No Gamepad --", -1);
+		for (var i = 0; i < gamepads.length; i++) {
+			if (gamepads[i] != null) {
+				select.options[i + 1] = new Option(gamepads[i].id, i);
+			}
+		}
+	}
+
+	window.addEventListener("gamepadconnected", function (e) {
+		gamepadHandler(e, true);
+	}, false);
+	window.addEventListener("gamepaddisconnected", function (e) {
+		gamepadHandler(e, false);
+	}, false);
+	gamepadHandler(0, false);
+
+	var interval = setInterval(pollGamepads, 200);
+
+	function pollGamepads() {
+		var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+		var gp = gamepads[gamepadIndex];
+		if (gp) {
+			socket.emit("gamepad_event", gp.axes);
+		}
+	}
+
+
+	// Code for drawing and handeling the thruster visualization
+	function draw_vessel(ctx) {
+		// Draw vessel outline
+		ctx.beginPath();
+		ctx.moveTo(3 * 35, 4 * 35);
+		ctx.lineTo(3 * 35, -4 * 35);
+		ctx.lineTo(2 * 35, -5 * 35);
+		ctx.lineTo(-2 * 35, -5 * 35);
+		ctx.lineTo(-3 * 35, -4 * 35);
+		ctx.lineTo(-3 * 35, 4 * 35);
+		ctx.lineTo(-2 * 35, 5 * 35);
+		ctx.lineTo(2 * 35, 5 * 35);
+		ctx.closePath();
+		ctx.lineWidth = 3;
+		ctx.stroke();
+
+		// fill inn vessel with color
+		ctx.fillStyle = "rgba(0, 0, 255, 0.7)";
+		ctx.fill();
+	}
+
+
+	function draw_thruster(ctx, x, y, magnitude, angle) {
+		// Rotate and translate
+		ctx.translate(x, y);
+		ctx.rotate(angle)
+
+		// Draw propeller
+		ctx.beginPath();
+		ctx.moveTo(0, 0);
+		ctx.bezierCurveTo(0, 5, 30, 5, 30, 0)
+		ctx.bezierCurveTo(30, -5, 0, -5, 0, 0)
+		ctx.bezierCurveTo(0, 5, -30, 5, -30, 0)
+		ctx.bezierCurveTo(-30, -5, 0, -5, 0, 0)
+		ctx.closePath();
+		ctx.lineWidth = 1;
+		ctx.fillStyle = "rgba(128, 128, 128)";
+		ctx.fill();
+		ctx.stroke();
+
+		// Draw arrow
+		var headlen = Math.sign(magnitude) * 10
+		ctx.beginPath();
+		ctx.moveTo(0, 0);
+		ctx.lineTo(0, magnitude);
+		ctx.lineTo(headlen / 2, magnitude - headlen / 2)
+		ctx.lineTo(-headlen / 2, magnitude - headlen / 2)
+		ctx.lineTo(0, magnitude);
+		ctx.fillStyle = "rgba(0, 0, 0)";
+		ctx.fill();
+		ctx.lineWidth = 1;
+		ctx.stroke();
+
+		// Restore to default translation and roatation
+		ctx.restore();
+	}
+
+	// Set center of canvas as origin
+	var vesselCanvas = document.getElementById("thrustCanvas");
+	var vesselctx = vesselCanvas.getContext("2d");
+	vesselctx.translate(200, 200);
+	vesselctx.save();
+	draw_vessel(vesselctx);
+	draw_thruster(vesselctx, 100, -50, 0, 0);
+	draw_thruster(vesselctx, 100, 50, 0, 0);
+	draw_thruster(vesselctx, -100, 50, 0, 0);
+	draw_thruster(vesselctx, -100, -50, 0, 0);
+
+
+	socket.on("actuator_state", function (msg) {
+		// Clear canvas
+		vesselctx.setTransform(1, 0, 0, 1, 0, 0);
+		vesselctx.clearRect(0, 0, vesselCanvas.width, vesselCanvas.height);
+		vesselctx.translate(200, 200);
+		vesselctx.save();
+
+		// Redraw vessel
+		draw_vessel(vesselctx);
+		draw_thruster(vesselctx, 100, -50, msg["actuator_1"]["throttle"] / 6.0, msg["actuator_1"]["angle"] * Math.PI / 180.0);
+		draw_thruster(vesselctx, 100, 50, msg["actuator_2"]["throttle"] / 6.0, msg["actuator_2"]["angle"] * Math.PI / 180.0);
+		draw_thruster(vesselctx, -100, 50, msg["actuator_3"]["throttle"] / 6.0, msg["actuator_3"]["angle"] * Math.PI / 180.0);
+		draw_thruster(vesselctx, -100, -50, msg["actuator_4"]["throttle"] / 6.0, msg["actuator_4"]["angle"] * Math.PI / 180.0);
+	});
+</script>
+{% endblock %}
