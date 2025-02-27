@@ -16,3 +16,12 @@ If you want to mock internal status data you can do:
 ```bash
 ros2 launch auv_gui gui.launch.py mock_data:=true
 ```
+
+On receiving this error:
+```bash
+qt.qpa.wayland: eglSwapBuffers failed with 0x300d, surface: 0x0
+```
+The following might fix it:
+```bash
+export QT_QPA_PLATFORM=xcb
+```

@@ -14,7 +14,7 @@ from geometry_msgs.msg import (
     TwistWithCovarianceStamped,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QDoubleValidator, QIcon, QImage, QPalette, QPixmap
+from PyQt6.QtGui import QDoubleValidator, QIcon, QImage, QPalette, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
-    QMenu,
     QPushButton,
     QTabWidget,
     QVBoxLayout,
@@ -37,7 +36,7 @@ from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Float32
-from vortex_msgs.action import LOSGuidance, NavigateWaypoints, ReferenceFilterWaypoint
+from vortex_msgs.action import LOSGuidance, ReferenceFilterWaypoint
 from vortex_utils.python_utils import H264Decoder, euler_to_quat, quat_to_euler
 
 from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
@@ -191,10 +190,6 @@ class GuiNode(Node):
         self.send_button_los.clicked.connect(self.send_goal_los)
         self.send_button_los.setEnabled(False)
 
-        self.send_button_nav = QPushButton("Send Mission (NavigateWaypoints)")
-        self.send_button_nav.clicked.connect(self.send_goal_navigate_waypoints)
-        self.send_button_nav.setEnabled(False)
-
         self.clear_button = QPushButton("Clear Waypoints")
         self.clear_button.clicked.connect(self.clear_waypoints)
 
@@ -244,19 +239,11 @@ class GuiNode(Node):
         self.send_button_ref.setEnabled(True)
         self.send_button_los.setEnabled(True)
 
-        if self.waypoint_list.count() > 1:
-            self.send_button_nav.setEnabled(True)
-
     def clear_waypoints(self):
         """Clear the waypoint list."""
         self.waypoint_list.clear()
-        self.ordered_list.clear()
-        self.send_button_nav.setEnabled(False)
         self.send_button_ref.setEnabled(False)
         self.send_button_los.setEnabled(False)
-
-    def update_ordered_waypoints(self):
-        """Update internal order of waypoints based on the reordered list."""
 
     def get_waypoints(self):
         """Retrieve waypoints from the selected items in the list."""
@@ -337,54 +324,6 @@ class GuiNode(Node):
         goal = [point.x, point.y, point.z]
         self.los_points = [current_pos, goal]
 
-    def send_goal_navigate_waypoints(self):
-        """Send reordered waypoints to the NavigateWaypoints action."""
-        if self.ordered_list.count() < 2:
-            self.get_logger().error("NavigateWaypoints requires multiple waypoints.")
-            return
-
-        # Add first waypoint for plotting
-        current_pos = PoseStamped()
-        current_pos.pose.position.x = self.xpos_data[-1]
-        current_pos.pose.position.y = self.ypos_data[-1]
-        current_pos.pose.position.z = -self.zpos_data[-1]
-        self.waypoints = [current_pos]
-        for i in range(self.ordered_list.count()):
-            text = self.ordered_list.item(i).text()
-            parts = text.replace(" ", "").split(",")
-            x_val = float(parts[0].split(":")[1])
-            y_val = float(parts[1].split(":")[1])
-            z_val = float(parts[2].split(":")[1])
-            roll_val = float(parts[3].split(":")[1])
-            pitch_val = float(parts[4].split(":")[1])
-            yaw_val = float(parts[5].split(":")[1])
-
-            pose_stamped = PoseStamped()
-            pose_stamped.pose.position.x = x_val
-            pose_stamped.pose.position.y = y_val
-            pose_stamped.pose.position.z = z_val
-
-            quat = euler_to_quat(roll_val, pitch_val, yaw_val)
-            pose_stamped.pose.orientation.x = quat[0]
-            pose_stamped.pose.orientation.y = quat[1]
-            pose_stamped.pose.orientation.z = quat[2]
-            pose_stamped.pose.orientation.w = quat[3]
-
-            self.waypoints.append(pose_stamped)
-
-        goal_msg = NavigateWaypoints.Goal()
-        goal_msg.waypoints = self.waypoints[1:]
-
-        # Send the goal asynchronously
-        if not self._navigate_waypoints_client.wait_for_server(timeout_sec=1.0):
-            self.get_logger().error("NavigateWaypoints action server not available.")
-            return
-        self.get_logger().info("Sending waypoints to NavigateWaypoints...")
-        self._send_goal_future = self._navigate_waypoints_client.send_goal_async(
-            goal_msg, feedback_callback=None
-        )
-        self._send_goal_future.add_done_callback(self.goal_response_callback)
-
     def update_button_states(self):
         """Enable/Disable buttons based on waypoint selection."""
         selected_count = len(self.waypoint_list.selectedItems())
@@ -402,26 +341,6 @@ class GuiNode(Node):
                 cancel_future.add_done_callback(self.cancel_result_callback)
             else:
                 self.get_logger().warn("No active goal to cancel.")
-
-    def show_waypoint_context_menu(self, pos):
-        """Display the context menu when a waypoint is right-clicked."""
-        menu = QMenu(self.waypoint_list)
-        transfer_action = QAction("Transfer to Ordered List", self.waypoint_list)
-        transfer_action.triggered.connect(self.transfer_selected_waypoint)
-        menu.addAction(transfer_action)
-        menu.exec(self.waypoint_list.viewport().mapToGlobal(pos))
-
-    def transfer_selected_waypoint(self):
-        selected_items = self.waypoint_list.selectedItems()
-        if not selected_items:
-            self.get_logger().warn("No waypoint selected for transfer.")
-            return
-
-        for item in selected_items:
-            self.ordered_list.addItem(item.text())
-            self.waypoint_list.takeItem(self.waypoint_list.row(item))
-
-        self.send_button_nav.setEnabled(self.ordered_list.count() > 1)
 
     # --- Callback functions ---
     def image_callback(self, msg: CompressedImage) -> None:
@@ -625,10 +544,6 @@ def main(args: Optional[list[str]] = None) -> None:
     ros_node.send_button_ref.clicked.connect(ros_node.send_goal_reference_filter)
     ros_node.send_button_ref.setEnabled(False)
 
-    ros_node.send_button_nav = QPushButton("Send Mission (NavigateWaypoints)")
-    ros_node.send_button_nav.clicked.connect(ros_node.send_goal_navigate_waypoints)
-    ros_node.send_button_nav.setEnabled(False)
-
     ros_node.clear_button = QPushButton("Clear Waypoints")
     ros_node.clear_button.clicked.connect(ros_node.clear_waypoints)
 
@@ -647,29 +562,15 @@ def main(args: Optional[list[str]] = None) -> None:
 
     # List widget to display waypoints
     ros_node.waypoint_list = QListWidget()
-    ros_node.waypoint_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-    ros_node.waypoint_list.customContextMenuRequested.connect(
-        ros_node.show_waypoint_context_menu
-    )
     ros_node.waypoint_list.setSelectionMode(
         QAbstractItemView.SelectionMode.ExtendedSelection
     )
     ros_node.waypoint_list.itemSelectionChanged.connect(ros_node.update_button_states)
 
-    # Re-orderable list for NavigateWaypoints
-    ros_node.ordered_list = QListWidget()
-    ros_node.ordered_list.setSelectionMode(
-        QAbstractItemView.SelectionMode.ExtendedSelection
-    )
-    ros_node.ordered_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
-    ros_node.ordered_list.model().rowsMoved.connect(ros_node.update_ordered_waypoints)
-
     # Add layouts to the mission position layout
     mission_position_layout.addLayout(inputs_layout, 1, 0, 1, 4)
     mission_position_layout.addLayout(buttons_layout, 2, 0, 1, 4)
     mission_position_layout.addWidget(ros_node.waypoint_list, 3, 0, 1, 4)
-    mission_position_layout.addWidget(ros_node.ordered_list, 3, 4)
-    mission_position_layout.addWidget(ros_node.send_button_nav, 2, 4)
     tabs.addTab(mission_position_widget, "Mission")
 
     # Internal Status Tab

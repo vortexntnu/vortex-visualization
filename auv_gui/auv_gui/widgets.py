@@ -8,7 +8,7 @@ from pglive.sources.data_connector import DataConnector
 from pglive.sources.live_axis import LiveAxis
 from pglive.sources.live_plot import LiveLinePlot
 from pglive.sources.live_plot_widget import LivePlotWidget
-from PyQt6.QtGui import QVector3D
+from PyQt6.QtGui import QOpenGLContext, QVector3D
 from PyQt6.QtWidgets import (
     QLabel,
     QVBoxLayout,
@@ -20,6 +20,10 @@ class OpenGLPlotWidget(QWidget):
     def __init__(self, gui_node, parent=None):
         """Initialize the OpenGL 3D plot."""
         super().__init__(parent)
+        self.opengl_context = QOpenGLContext.currentContext()
+        if not self.opengl_context:
+            print("Warning: No OpenGL context available!")
+
         self.gui_node = gui_node
 
         self.follow_mode = False
@@ -43,7 +47,6 @@ class OpenGLPlotWidget(QWidget):
             color=(255, 0, 0, 255),
             size=5,  # Red dot
         )
-        self.waypoints_plot = gl.GLScatterPlotItem(color=(0, 255, 0, 255), size=5)
 
         self.view.addItem(self.trajectory)
         self.view.addItem(self.current_position_dot)
@@ -71,15 +74,6 @@ class OpenGLPlotWidget(QWidget):
                 vec.setY(points[-1][1])
                 vec.setZ(points[-1][2])
                 self.view.setCameraPosition(pos=vec)
-
-        if len(self.gui_node.waypoints) > 0:
-            waypoints = np.array(
-                [
-                    [wp.pose.position.x, wp.pose.position.y, -wp.pose.position.z]
-                    for wp in self.gui_node.waypoints
-                ]
-            )
-            self.waypoints_plot.setData(pos=waypoints)
 
     def clear_plot(self):
         """Clear the 3D plot by resetting the trajectory and position dot."""
