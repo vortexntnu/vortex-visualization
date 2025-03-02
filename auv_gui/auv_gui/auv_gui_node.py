@@ -38,9 +38,11 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Float32
 from vortex_msgs.action import LOSGuidance, NavigateWaypoints, ReferenceFilterWaypoint
-from vortex_utils.python_utils import H264Decoder, euler_to_quat, quat_to_euler
+from vortex_msgs.msg import ReferenceFilter
+from vortex_utils.python_utils import euler_to_quat, quat_to_euler
+from vortex_utils.gst_utils import H264Decoder
 
-from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget
+from auv_gui.widgets import InternalStatusWidget, OpenGLPlotWidget, TimeSeriesPlotWidget
 
 best_effort_qos = QoSProfile(
     reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -90,6 +92,9 @@ class GuiNode(Node):
 
         self.mock_data = self.get_parameter("mock_data").value
 
+        self.declare_parameter("topics.guidance.dp", '_')
+        guidance_topic = self.get_parameter("topics.guidance.dp").value
+
         # Subscriber to the odometry topics
         self.pose_subscription = self.create_subscription(
             PoseWithCovarianceStamped,
@@ -107,9 +112,13 @@ class GuiNode(Node):
 
         self.image_subscription = self.create_subscription(
             CompressedImage,
-            "/image_compressed",
+            "/flir/image_compressed",
             self.image_callback,
             qos_profile=best_effort_qos,
+        )
+
+        self.dp_guidance_subscriber = self.create_subscription(
+            ReferenceFilter, guidance_topic, self.guidance_callback, qos_profile=best_effort_qos
         )
 
         self.decoder = H264Decoder()
@@ -135,6 +144,19 @@ class GuiNode(Node):
         self.pitch: float = None
         self.yaw: float = None
 
+        self.timestamps = []
+        self.roll_data = []
+        self.pitch_data = []
+        self.yaw_data = []
+
+        self.reference_timestamp = []
+        self.reference_x = []
+        self.reference_y = []
+        self.reference_z = []
+        self.reference_roll = []
+        self.reference_pitch = []
+        self.reference_yaw = []
+
         # Subscribe to internal status topics
         self.current_subscriber = self.create_subscription(
             Float32, self.current_topic, self.current_callback, 5
@@ -150,10 +172,15 @@ class GuiNode(Node):
         )
 
         # Variables for internal status
-        self.current = Queue(maxsize=10)
-        self.voltage = Queue(maxsize=10)
-        self.temperature = Queue(maxsize=10)
-        self.pressure = Queue(maxsize=10)
+        self.current_q = Queue(maxsize=10)
+        self.voltage_q = Queue(maxsize=10)
+        self.temperature_q = Queue(maxsize=10)
+        self.pressure_q = Queue(maxsize=10)
+
+        self.current = 0.0
+        self.voltage = 0.0
+        self.temperature = 0.0
+        self.pressure = 0.0
 
         # --- Waypoint stuff ---
 
@@ -462,6 +489,8 @@ class GuiNode(Node):
 
     def pose_callback(self, msg: PoseWithCovarianceStamped) -> None:
         """Callback function that is triggered when an odometry message is received."""
+        timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        self.timestamps.append(timestamp)
         # Extract x, y, z positions from the odometry message
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
@@ -476,6 +505,18 @@ class GuiNode(Node):
         y = msg.pose.pose.orientation.y
         z = msg.pose.pose.orientation.z
         self.roll, self.pitch, self.yaw = quat_to_euler(x, y, z, w)
+        self.roll_data.append(self.roll)
+        self.pitch_data.append(self.pitch)
+        self.yaw_data.append(self.yaw)
+
+        if len(self.timestamps) > 500:
+            self.timestamps.pop(0)
+            self.xpos_data.pop(0)
+            self.ypos_data.pop(0)
+            self.zpos_data.pop(0)
+            self.roll_data.pop(0)
+            self.pitch_data.pop(0)
+            self.yaw_data.pop(0)
 
         # Limit the stored data for real-time plotting (avoid memory overflow)
         # max_data_points = (
@@ -489,25 +530,48 @@ class GuiNode(Node):
     def twist_callback(self, msg: TwistWithCovarianceStamped) -> None:
         pass
 
+    def guidance_callback(self, msg: ReferenceFilter):
+        timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        self.reference_timestamp.append(timestamp)
+        self.reference_x.append(msg.x)
+        self.reference_y.append(msg.y)
+        self.reference_z.append(msg.z)
+        self.reference_roll.append(msg.roll)
+        self.reference_pitch.append(msg.pitch)
+        self.reference_yaw.append(msg.yaw)
+
+        if len(self.reference_timestamp) > 500:
+            self.reference_timestamp.pop(0)
+            self.reference_x.pop(0)
+            self.reference_y.pop(0)
+            self.reference_z.pop(0)
+            self.reference_roll.pop(0)
+            self.reference_pitch.pop(0)
+            self.reference_yaw.pop(0)
+
     def current_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a current message is received."""
         temp_timestamp = time.time()
-        self.current.put((msg.data, temp_timestamp))
+        self.current_q.put((msg.data, temp_timestamp))
+        self.current = msg.data
 
     def voltage_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a voltage message is received."""
         temp_timestamp = time.time()
-        self.voltage.put((msg.data, temp_timestamp))
+        self.voltage_q.put((msg.data, temp_timestamp))
+        self.voltage = msg.data
 
     def temperature_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a temperature message is received."""
         temp_timestamp = time.time()
-        self.temperature.put((msg.data, temp_timestamp))
+        self.temperature_q.put((msg.data, temp_timestamp))
+        self.temperature = msg.data
 
     def pressure_callback(self, msg: Float32) -> None:
         """Callback function that is triggered when a pressure message is received."""
         temp_timestamp = time.time()
-        self.pressure.put((msg.data, temp_timestamp))
+        self.pressure_q.put((msg.data / 1000, temp_timestamp))
+        self.pressure = msg.data / 1000
 
 
 def run_ros_node(ros_node: GuiNode, executor: MultiThreadedExecutor) -> None:
@@ -549,15 +613,15 @@ def main(args: Optional[list[str]] = None) -> None:
     tabs.setTabPosition(QTabWidget.TabPosition.North)
     tabs.setMovable(True)
 
+    # --- Mission and Position Tab ---
+    mission_position_widget = QWidget()
+    mission_position_layout = QGridLayout(mission_position_widget)
+
     # --- Image Tab ---
     image_tab_widget = QWidget()
     image_layout = QVBoxLayout(image_tab_widget)
     image_layout.addWidget(ros_node.video_label)
     tabs.addTab(image_tab_widget, "Camera Feed")
-
-    # --- Mission and Position Tab ---
-    mission_position_widget = QWidget()
-    mission_position_layout = QGridLayout(mission_position_widget)
 
     # --- Position Section ---
     plot_canvas = OpenGLPlotWidget(ros_node, mission_position_widget)
@@ -676,6 +740,18 @@ def main(args: Optional[list[str]] = None) -> None:
     internal_status = InternalStatusWidget()
     tabs.addTab(internal_status.get_widget(), "Internal")
 
+    # DP Tuning tab
+    dp_tuning_widget = QWidget()
+    dp_tuning_layout = QGridLayout()
+    labels = ["north (m)", "east (m)", "down (m)", "Roll (rad)", "Pitch (rad)", "Yaw (rad)"]
+    plot_widgets = []
+    for i, label in enumerate(labels):
+        widget = TimeSeriesPlotWidget(label)
+        dp_tuning_layout.addWidget(widget, i // 2, i % 2)
+        plot_widgets.append(widget)
+    dp_tuning_widget.setLayout(dp_tuning_layout)
+    tabs.addTab(dp_tuning_widget, "DP Tuning")
+
     # Start in fullscreen
     gui.setCentralWidget(tabs)
     gui.showMaximized()
@@ -684,10 +760,10 @@ def main(args: Optional[list[str]] = None) -> None:
     def update_gui() -> None:
         # Update mock data first if enabled
         if ros_node.mock_data:
-            ros_node.current.put((1.0 + (random.random() * 0.06), time.time()))
-            ros_node.voltage.put((12.0 + (random.random() * 0.07), time.time()))
-            ros_node.temperature.put((25.0 + (random.random() * 0.15), time.time()))
-            ros_node.pressure.put((1013.25 + (random.random()), time.time()))
+            ros_node.current_q.put((1.0 + (random.random() * 0.06), time.time()))
+            ros_node.voltage_q.put((12.0 + (random.random() * 0.07), time.time()))
+            ros_node.temperature_q.put((25.0 + (random.random() * 0.15), time.time()))
+            ros_node.pressure_q.put((1013.25 + (random.random()), time.time()))
 
         plot_canvas.update_plot(
             ros_node.xpos_data, ros_node.ypos_data, ros_node.zpos_data
@@ -711,24 +787,40 @@ def main(args: Optional[list[str]] = None) -> None:
             ros_node.los_points = []
 
         try:
-            current_val = ros_node.current.queue[-1][0]
-            voltage_val = ros_node.voltage.queue[-1][0]
-            temperature_val = ros_node.temperature.queue[-1][0]
-            pressure_val = ros_node.pressure.queue[-1][0]
             status_text = (
                 f"<b>Internal Status:</b><br>"
-                f"Current: {current_val:.2f} A<br>"
-                f"Voltage: {voltage_val:.2f} V<br>"
-                f"Temperature: {temperature_val:.2f} °C<br>"
-                f"Pressure: {pressure_val:.2f} hPa"
+                f"Current: {ros_node.current:.2f} A<br>"
+                f"Voltage: {ros_node.voltage:.2f} V<br>"
+                f"Temperature: {ros_node.temperature:.2f} °C<br>"
+                f"Pressure: {ros_node.pressure:.2f} bar"
             )
         except IndexError:
             status_text = "<b>Internal Status:</b> Not Available"
         internal_status_label.setText(status_text)
 
         internal_status.update(
-            ros_node.current, ros_node.voltage, ros_node.temperature, ros_node.pressure
+            ros_node.current_q, ros_node.voltage_q, ros_node.temperature_q, ros_node.pressure_q
         )
+
+        actual_data = [
+            (ros_node.timestamps, ros_node.xpos_data),
+            (ros_node.timestamps, ros_node.ypos_data),
+            (ros_node.timestamps, ros_node.zpos_data),
+            (ros_node.timestamps, ros_node.roll_data),
+            (ros_node.timestamps, ros_node.pitch_data),
+            (ros_node.timestamps, ros_node.yaw_data),
+        ]
+        reference_data = [
+            (ros_node.reference_timestamp, ros_node.reference_x),
+            (ros_node.reference_timestamp, ros_node.reference_y),
+            (ros_node.reference_timestamp, ros_node.reference_z),
+            (ros_node.reference_timestamp, ros_node.reference_roll),
+            (ros_node.reference_timestamp, ros_node.reference_pitch),
+            (ros_node.reference_timestamp, ros_node.reference_yaw),
+        ]
+
+        for i, widget in enumerate(plot_widgets):
+            widget.update_plot(actual_data[i], reference_data[i])
 
     timer = QTimer()
     timer.timeout.connect(update_gui)

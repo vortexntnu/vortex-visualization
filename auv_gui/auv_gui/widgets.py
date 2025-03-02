@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 class OpenGLPlotWidget(QWidget):
     def __init__(self, gui_node, parent=None):
@@ -158,7 +159,7 @@ class InternalStatusWidget:
         self.current = AnalogWidget("Current", "A", "red")
         self.voltage = AnalogWidget("Voltage", "V", "green")
         self.temperature = AnalogWidget("Temperature", "C", "blue")
-        self.pressure = AnalogWidget("Pressure", "hPa", "yellow")
+        self.pressure = AnalogWidget("Pressure", "bar", "yellow")
 
         for analog in [self.current, self.voltage, self.temperature, self.pressure]:
             label, chart = analog.return_widgets()
@@ -177,3 +178,31 @@ class InternalStatusWidget:
             [current, voltage, temperature, pressure],
         ):
             analog.update(queue)
+
+
+class TimeSeriesPlotWidget(QWidget):
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        self.figure = Figure(figsize=(5,3))
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_title(title)
+        self.ax.set_xlabel("Time (s)")
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+
+    def update_plot(self, actual_data, reference_data):
+        self.ax.clear()
+        actual_ts, actual_val = actual_data
+        reference_ts, reference_val = reference_data
+
+        if actual_ts and actual_val:
+            self.ax.plot(actual_ts, actual_val, label="Actual", color='blue')
+        if reference_ts and reference_val:
+            self.ax.plot(reference_ts, reference_val, label="Reference", color="red")
+
+        self.ax.set_title(self.ax.get_title())
+        self.ax.set_xlabel("Time (s)")
+        self.ax.legend()
+        self.canvas.draw()
