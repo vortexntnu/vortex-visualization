@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED and Motor Controller</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+        }
+        button[name="action"][value="on"] {
+            background-color: #4CAF50; /* Green */
+        }
+        button[name="action"][value="off"] {
+            background-color: #f44336; /* Red */
+        }
+        button[name="motor_action"][value="forward"] {
+            background-color: #2196F3; /* Blue */
+        }
+        button[name="motor_action"][value="backward"] {
+            background-color: #FF9800; /* Orange */
+        }
+        button[name="motor_action"][value="stop"] {
+            background-color: #555; /* Gray */
+        }
+        #terminal {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            width: 300px;
+            height: 100px;
+            overflow-y: scroll;
+            text-align: left;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>LED and Motor Controller</h1>
+    <form action="/control" method="post">
+        <div class="control-buttons">
+            <button name="action" value="on" type="submit">Turn LED On</button>
+            <button name="action" value="off" type="submit">Turn LED Off</button>
+        </div>
+        <div class="control-buttons">
+            <button name="motor_action" value="forward" type="submit">Motor Forward</button>
+            <button name="motor_action" value="backward" type="submit">Motor Backward</button>
+            <button name="motor_action" value="stop" type="submit">Motor Stop</button>
+        </div>
+    </form>
+
+    <div id="terminal">Terminal: Press W, A, S, D to control the motor.</div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+
+        // Function to send motor control commands
+        function sendMotorCommand(action) {
+            fetch('/control', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `motor_action=${action}`,
+            });
+        }
+
+        // Capture keyboard inputs
+        document.addEventListener('keydown', (event) => {
+            let command = '';
+            switch (event.key.toLowerCase()) {
+                case 'w':
+                    command = 'forward';
+                    break;
+                case 's':
+                    command = 'backward';
+                    break;
+                case 'a':
+                    command = 'left';
+                    break;
+                case 'd':
+                    command = 'right';
+                    break;
+                case ' ':
+                    command = 'stop';
+                    break;
+                default:
+                    return; // Ignore other keys
+            }
+            sendMotorCommand(command);
+            terminal.innerHTML += `<br>Key pressed: ${event.key} (${command})`;
+            terminal.scrollTop = terminal.scrollHeight; // Auto-scroll to bottom
+        });
+    </script>
+</body>
+</html>
