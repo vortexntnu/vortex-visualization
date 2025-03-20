@@ -16,3 +16,13 @@ If you want to mock internal status data you can do:
 ```bash
 ros2 launch auv_gui gui.launch.py mock_data:=true
 ```
+## Troubleshooting
+If the GUI does not launch properly, this might help:
+```bash
+export QT_QPA_PLATFORM=xcb
+```
+
+If the GUI struggles with establishing an OpenGL context, and can't draw any objects, this might help:
+```bash
+export PYOPENGL_PLATFORM=glx
+```
