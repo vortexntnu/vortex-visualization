@@ -549,12 +549,6 @@ def main(args: Optional[list[str]] = None) -> None:
     tabs.setTabPosition(QTabWidget.TabPosition.North)
     tabs.setMovable(True)
 
-    # --- Image Tab ---
-    image_tab_widget = QWidget()
-    image_layout = QVBoxLayout(image_tab_widget)
-    image_layout.addWidget(ros_node.video_label)
-    tabs.addTab(image_tab_widget, "Camera Feed")
-
     # --- Mission and Position Tab ---
     mission_position_widget = QWidget()
     mission_position_layout = QGridLayout(mission_position_widget)
@@ -671,6 +665,12 @@ def main(args: Optional[list[str]] = None) -> None:
     mission_position_layout.addWidget(ros_node.ordered_list, 3, 4)
     mission_position_layout.addWidget(ros_node.send_button_nav, 2, 4)
     tabs.addTab(mission_position_widget, "Mission")
+
+    # --- Image Tab ---
+    image_tab_widget = QWidget()
+    image_layout = QVBoxLayout(image_tab_widget)
+    image_layout.addWidget(ros_node.video_label)
+    tabs.addTab(image_tab_widget, "Camera Feed")
 
     # Internal Status Tab
     internal_status = InternalStatusWidget()
