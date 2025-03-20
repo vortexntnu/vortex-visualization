@@ -549,12 +549,6 @@ def main(args: Optional[list[str]] = None) -> None:
     tabs.setTabPosition(QTabWidget.TabPosition.North)
     tabs.setMovable(True)
 
-    # --- Image Tab ---
-    image_tab_widget = QWidget()
-    image_layout = QVBoxLayout(image_tab_widget)
-    image_layout.addWidget(ros_node.video_label)
-    tabs.addTab(image_tab_widget, "Camera Feed")
-
     # --- Mission and Position Tab ---
     mission_position_widget = QWidget()
     mission_position_layout = QGridLayout(mission_position_widget)
@@ -672,6 +666,12 @@ def main(args: Optional[list[str]] = None) -> None:
     mission_position_layout.addWidget(ros_node.send_button_nav, 2, 4)
     tabs.addTab(mission_position_widget, "Mission")
 
+    # --- Image Tab ---
+    image_tab_widget = QWidget()
+    image_layout = QVBoxLayout(image_tab_widget)
+    image_layout.addWidget(ros_node.video_label)
+    tabs.addTab(image_tab_widget, "Camera Feed")
+
     # Internal Status Tab
     internal_status = InternalStatusWidget()
     tabs.addTab(internal_status.get_widget(), "Internal")
@@ -693,18 +693,31 @@ def main(args: Optional[list[str]] = None) -> None:
             ros_node.xpos_data, ros_node.ypos_data, ros_node.zpos_data
         )
 
+        dt = 0.1
+        vx = (ros_node.xpos_data[-1] - ros_node.xpos_data[-2]) / dt
+        vy = (ros_node.ypos_data[-1] - ros_node.ypos_data[-2]) / dt
+        vz = (ros_node.zpos_data[-1] - ros_node.zpos_data[-2]) / dt
+
         if len(ros_node.xpos_data) > 0 and ros_node.roll is not None:
             position_text = (
                 f"<b>Current Position:</b><br>X: {ros_node.xpos_data[-1]:.2f}<br>"
                 f"Y: {ros_node.ypos_data[-1]:.2f}<br>"
                 f"Z: {ros_node.zpos_data[-1]:.2f}"
             )
+            velocity_text = f"Velocity: ({vx:.2f}, {vy:.2f}, {vz:.2f})"
             orientation_text = (
                 f"<b>Current Orientation:</b><br>Roll: {ros_node.roll:.2f}<br>"
                 f"Pitch: {ros_node.pitch:.2f}<br>"
                 f"Yaw: {ros_node.yaw:.2f}"
             )
-            current_pos.setText(position_text + "<br><br>" + orientation_text + "<br>")
+            current_pos.setText(
+                position_text
+                + "<br><br>"
+                + orientation_text
+                + "<br><br>"
+                + velocity_text
+                + "<br>"
+            )
 
         if len(ros_node.los_points) > 0:
             plot_canvas.plot_points_and_line(ros_node.los_points)

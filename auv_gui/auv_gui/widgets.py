@@ -26,7 +26,7 @@ class OpenGLPlotWidget(QWidget):
 
         self.view = gl.GLViewWidget()
         self.view.setCameraPosition(distance=10)
-        self.view.setBackgroundColor("gray")
+        self.view.setBackgroundColor("grey")
 
         self.grid = gl.GLGridItem()
         self.grid.setSize(20, 20, 1)
@@ -72,6 +72,8 @@ class OpenGLPlotWidget(QWidget):
                 vec.setZ(points[-1][2])
                 self.view.setCameraPosition(pos=vec)
 
+            self.update_direction_arrow(points[-2], points[-1])
+
         if len(self.gui_node.waypoints) > 0:
             waypoints = np.array(
                 [
@@ -80,6 +82,22 @@ class OpenGLPlotWidget(QWidget):
                 ]
             )
             self.waypoints_plot.setData(pos=waypoints)
+
+    def update_direction_arrow(self, prev_point, current_point):
+        """Draws an arrow showing the drone's facing direction."""
+        arrow_length = 1
+        direction = np.array(current_point) - np.array(prev_point)
+        direction = direction / np.linalg.norm(direction) * arrow_length
+
+        arrow_tip = np.array(current_point) + direction
+        arrow_line = np.array([current_point, arrow_tip])
+
+        if hasattr(self, "direction_arrow"):
+            self.direction_arrow.setData(pos=arrow_line)
+        else:
+            self.direction_arrow = gl.GLLinePlotItem(color=(255, 255, 0, 255), width=2)
+            self.view.addItem(self.direction_arrow)
+            self.direction_arrow.setData(pos=arrow_line)
 
     def clear_plot(self):
         """Clear the 3D plot by resetting the trajectory and position dot."""
