@@ -15,10 +15,10 @@ const SingleImageViewer: React.FC = () => {
       setConnected(true);
     });
 
-    ros.on('error', (error) => {
+    ros.on('error', (error: Error) => {
       console.error('❌ Connection error:', error);
       setConnected(false);
-    });
+    });    
 
     ros.on('close', () => {
       console.log('🔌 Connection closed.');
