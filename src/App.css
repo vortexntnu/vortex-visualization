@@ -1,38 +1,160 @@
-.App {
+/* App.css */
+:root {
+  --hud-color: rgba(0, 255, 255, 0.7);
+  --hud-bg: rgba(0, 20, 30, 0.85);
+  --critical-color: rgba(169, 76, 96, 0.9);
+}
+
+body {
+  margin: 0;
+  background-color: #000;
+  color: var(--hud-color);
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+
+.underwater-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-areas:
+    "top top top"
+    "left center right"
+    "bottom bottom bottom";
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 250px 1fr 250px;
+  padding: 10px;
+}
+
+/* Common HUD Element Styles */
+.hud-top, .hud-bottom, .hud-left, .hud-right, .hud-center {
+  border: 1px solid var(--hud-color);
+  background-color: var(--hud-bg);
+  backdrop-filter: blur(2px);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 5px;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+/* Specific Area Positioning */
+.hud-top {
+  grid-area: top;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hud-left {
+  grid-area: left;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.hud-center {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-right {
+  grid-area: right;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.hud-bottom {
+  grid-area: bottom;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* HUD Element Styles */
+.telemetry-box, .orientation-box {
+  padding: 15px;
+  border: 1px solid var(--hud-color);
+  border-radius: 4px;
+}
+
+.telemetry-box h3, .orientation-box h3 {
+  margin: 0 0 5px 0;
+  font-size: 1rem;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.value {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  margin: 5px 0;
+  text-shadow: 0 0 5px var(--hud-color);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background-color: lime;
+  box-shadow: 0 0 5px lime;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+/* Gauge Styles */
+.gauge {
+  width: 100%;
+  height: 10px;
+  background-color: rgba(0, 255, 255, 0.2);
+  border-radius: 5px;
+  margin: 10px 0;
+  overflow: hidden;
 }
 
-.App-link {
-  color: #61dafb;
+.gauge-fill {
+  height: 100%;
+  width: 50%;
+  background-color: var(--hud-color);
+  transform-origin: left center;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Battery Display */
+.battery-display {
+  position: relative;
+  width: 100px;
+  height: 20px;
+  border: 1px solid var(--hud-color);
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.battery-level {
+  height: 100%;
+  background-color: var(--hud-color);
+  transition: width 0.5s ease;
+}
+
+/* Critical Alerts */
+.critical {
+  border-color: var(--critical-color);
+  box-shadow: 0 0 10px var(--critical-color);
+}
+
+.critical .value {
+  color: var(--critical-color);
+  text-shadow: 0 0 5px var(--critical-color);
+}
+
+/* Sonar Display */
+.sonar-display {
+  flex: 1;
+  background: radial-gradient(circle, transparent 60%, rgba(0, 255, 255, 0.1) 100%);
+  border: 1px solid var(--hud-color);
+  margin-top: 15px;
+  position: relative;
 }
