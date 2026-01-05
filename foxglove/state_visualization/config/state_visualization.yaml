@@ -1,0 +1,6 @@
+/**:
+  ros__parameters:
+    pose_sub_topic: "/pose"
+    odom_sub_topic: "/odom_ESKF"
+    state_visualization_pub_topic: "/state_visualization"
+    target_frame: "odom"
