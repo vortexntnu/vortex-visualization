@@ -2,5 +2,9 @@
   ros__parameters:
     pose_sub_topic: "/pose"
     odom_sub_topic: "/odom_ESKF"
-    state_visualization_pub_topic: "/state_visualization"
+    landmark_array_sub_topic: "/filtered_landmarks"
+    pos_visualization_pub_topic: "/state_visualization/pos"
+    orient_visualization_pub_topic: "/state_visualization/orient"
+    pose_array_pub_topic: "/state_visualization/pose_axis"
     target_frame: "odom"
+    pos_mahalanobis_threshold: 2.0

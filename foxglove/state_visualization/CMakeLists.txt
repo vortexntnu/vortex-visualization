@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(foxglove_msgs REQUIRED)
+find_package(vortex_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 
@@ -32,6 +33,7 @@ ament_target_dependencies(state_visualization_node
   geometry_msgs
   nav_msgs
   foxglove_msgs
+  vortex_msgs
   Eigen3
 )
 

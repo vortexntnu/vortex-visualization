@@ -8,21 +8,37 @@ namespace vortex::visualization {
 
 StateVisualizationNode::StateVisualizationNode() : Node("state_visualization") {
 
+  pos_mahalanobis_threshold_ =
+      this->declare_parameter<double>("pos_mahalanobis_threshold");
+
   std::string pose_sub_topic =
       this->declare_parameter<std::string>("pose_sub_topic");
 
-  std::string state_visualization_pub_topic =
-      this->declare_parameter<std::string>("state_visualization_pub_topic");
+  std::string pos_visualization_pub_topic =
+      this->declare_parameter<std::string>("pos_visualization_pub_topic");
+
+  std::string orient_visualization_pub_topic =
+      this->declare_parameter<std::string>("orient_visualization_pub_topic");
 
   std::string odom_sub_topic =
       this->declare_parameter<std::string>("odom_sub_topic");
+
+  std::string landmark_array_sub_topic =
+      this->declare_parameter<std::string>("landmark_array_sub_topic");
+
+  std::string pose_array_pub_topic =
+      this->declare_parameter<std::string>("pose_array_pub_topic");
 
   auto qos_profile{rclcpp::QoS(5)};
   qos_profile.best_effort();
   qos_profile.durability_volatile();
 
-  scene_pub_ = this->create_publisher<foxglove_msgs::msg::SceneUpdate>(
-      state_visualization_pub_topic, qos_profile);
+  scene_pub_pos_ = this->create_publisher<foxglove_msgs::msg::SceneUpdate>(
+      pos_visualization_pub_topic, qos_profile);
+  scene_pub_orient_ = this->create_publisher<foxglove_msgs::msg::SceneUpdate>(
+      orient_visualization_pub_topic, qos_profile);
+  pose_array_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
+      pose_array_pub_topic, qos_profile);
   pose_sub_ =
       this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
           pose_sub_topic, qos_profile,
@@ -32,53 +48,74 @@ StateVisualizationNode::StateVisualizationNode() : Node("state_visualization") {
       odom_sub_topic, qos_profile,
       std::bind(&StateVisualizationNode::odom_callback, this,
                 std::placeholders::_1));
+  landmark_array_sub_ =
+      this->create_subscription<vortex_msgs::msg::LandmarkArray>(
+          landmark_array_sub_topic, qos_profile,
+          std::bind(&StateVisualizationNode::landmark_array_callback, this,
+                    std::placeholders::_1));
 }
 
 void StateVisualizationNode::pose_callback(
     const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
-  foxglove_msgs::msg::SceneUpdate scene_update;
 
-  const double px = msg->pose.pose.position.x;
-  const double py = msg->pose.pose.position.y;
-  const double pz = msg->pose.pose.position.z;
+  foxglove_msgs::msg::SceneUpdate scene_update_pos;
+  geometry_msgs::msg::PoseArray pose_array_msg;
+  foxglove_msgs::msg::SceneUpdate scene_update_orient;
+  scene_update_pos.entities.push_back(make_position_entity(
+      msg->pose, msg->header, pos_mahalanobis_threshold_, 0));
 
-  auto entity = make_scene_entity_base(msg, 0);
+  scene_update_orient.entities.push_back(
+      make_orientation_entity(msg->pose, msg->header, 0));
 
-  // Position covariance
-  Eigen::Matrix3d cov3d = extract_position_covariance(msg);
-  EllipsoidData ell = compute_covariance_ellipsoid(cov3d);
-  entity.spheres.push_back(make_covariance_sphere(ell, px, py, pz));
+  pose_array_msg.header = msg->header;
+  pose_array_msg.poses.push_back(msg->pose.pose);
+  pose_array_pub_->publish(pose_array_msg);
 
-  // Orientation covariance
-  Eigen::Quaterniond q(
-      msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
-      msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
-  q.normalize();
-
-  Eigen::Vector3d ori_std = extract_orientation_stddevs(msg);
-
-  add_orientation_cone(entity, q * Eigen::Vector3d::UnitX(), ori_std.x(), px,
-                       py, pz, 1.0f, 0.0f, 0.0f);
-
-  add_orientation_cone(entity, q * Eigen::Vector3d::UnitY(), ori_std.y(), px,
-                       py, pz, 0.0f, 1.0f, 0.0f);
-
-  add_orientation_cone(entity, q * Eigen::Vector3d::UnitZ(), ori_std.z(), px,
-                       py, pz, 0.0f, 0.0f, 1.0f);
-
-  scene_update.entities.push_back(entity);
-  scene_pub_->publish(scene_update);
+  scene_pub_pos_->publish(scene_update_pos);
+  scene_pub_orient_->publish(scene_update_orient);
 }
 
 void StateVisualizationNode::odom_callback(
     const nav_msgs::msg::Odometry::SharedPtr msg) {
-  auto pose_msg =
-      std::make_shared<geometry_msgs::msg::PoseWithCovarianceStamped>();
 
-  pose_msg->header = msg->header;
-  pose_msg->pose = msg->pose;
+  foxglove_msgs::msg::SceneUpdate scene_update_pos;
+  foxglove_msgs::msg::SceneUpdate scene_update_orient;
 
-  pose_callback(pose_msg);
+  scene_update_pos.entities.push_back(make_position_entity(
+      msg->pose, msg->header, pos_mahalanobis_threshold_, 0));
+
+  scene_update_orient.entities.push_back(
+      make_orientation_entity(msg->pose, msg->header, 0));
+
+  geometry_msgs::msg::PoseArray pose_array_msg;
+  pose_array_msg.header = msg->header;
+  pose_array_msg.poses.push_back(msg->pose.pose);
+  pose_array_pub_->publish(pose_array_msg);
+
+  scene_pub_pos_->publish(scene_update_pos);
+  scene_pub_orient_->publish(scene_update_orient);
+}
+
+void StateVisualizationNode::landmark_array_callback(
+    const vortex_msgs::msg::LandmarkArray::SharedPtr msg) {
+
+  foxglove_msgs::msg::SceneUpdate scene_update_pos;
+  foxglove_msgs::msg::SceneUpdate scene_update_orient;
+  geometry_msgs::msg::PoseArray pose_array_msg;
+
+  pose_array_msg.header = msg->header;
+
+  for (const auto &landmark : msg->landmarks) {
+    scene_update_pos.entities.push_back(make_position_entity(
+        landmark.pose, msg->header, pos_mahalanobis_threshold_, 0));
+    scene_update_orient.entities.push_back(
+        make_orientation_entity(landmark.pose, msg->header, 0));
+    pose_array_msg.poses.push_back(landmark.pose.pose);
+  }
+
+  pose_array_pub_->publish(pose_array_msg);
+  scene_pub_pos_->publish(scene_update_pos);
+  scene_pub_orient_->publish(scene_update_orient);
 }
 
 } // namespace vortex::visualization
